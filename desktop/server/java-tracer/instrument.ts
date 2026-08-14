@@ -1,4 +1,5 @@
 const CLASS_PATTERN = /public\s+class\s+([A-Za-z_][\w]*)/;
+const MAIN_METHOD_PATTERN = /public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s*args\s*\)/;
 const METHOD_PATTERN =
   /^(?:\s*)(?:(?:public|private|protected)\s+)?(?:static\s+)?[\w<>,\[\]\s]+\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)\s*\{?\s*$/;
 const FIELD_PATTERN =
@@ -146,8 +147,87 @@ function appendMainFinally(output: string[], indent: string) {
   output.push(`${indent}  }`);
 }
 
-export function instrumentJava(source: string): { code: string; className: string } {
-  const className = source.match(CLASS_PATTERN)?.[1] ?? "Main";
+export function hasJavaMainMethod(source: string): boolean {
+  return MAIN_METHOD_PATTERN.test(source);
+}
+
+export function getJavaFileClassName(source: string): string {
+  const publicMatch = source.match(CLASS_PATTERN);
+  if (publicMatch) return publicMatch[1];
+  const classes = [...source.matchAll(/(?:public\s+)?class\s+([A-Za-z_][\w]*)/g)].map((match) => match[1]);
+  return classes[classes.length - 1] ?? "Main";
+}
+
+export function findJavaMainClass(source: string): string | null {
+  if (!hasJavaMainMethod(source)) return null;
+  const classMatches = [...source.matchAll(/(?:public\s+)?class\s+([A-Za-z_][\w]*)/g)];
+  for (let index = 0; index < classMatches.length; index++) {
+    const className = classMatches[index][1];
+    const start = classMatches[index].index ?? 0;
+    const end = classMatches[index + 1]?.index ?? source.length;
+    const block = source.slice(start, end);
+    if (MAIN_METHOD_PATTERN.test(block)) return className;
+  }
+  return null;
+}
+
+function injectMainIntoClass(source: string, className: string, bodyLines: string[]): string {
+  const pattern = new RegExp(`((?:public\\s+)?class\\s+${className}\\b[^{]*\\{)`);
+  const match = source.match(pattern);
+  if (!match || match.index === undefined) return source;
+
+  const openBraceIndex = match.index + match[0].length;
+  let depth = 1;
+  let index = openBraceIndex;
+  while (index < source.length && depth > 0) {
+    if (source[index] === "{") depth++;
+    if (source[index] === "}") depth--;
+    index++;
+  }
+  const insertAt = index - 1;
+  const body = bodyLines.map((line) => `        ${line}`).join("\n");
+  const mainMethod = `
+    public static void main(String[] args) {
+${body}
+    }
+`;
+  return source.slice(0, insertAt) + mainMethod + source.slice(insertAt);
+}
+
+export function prepareJavaSource(source: string): {
+  source: string;
+  fileClassName: string;
+  runClassName: string;
+} {
+  const fileClassName = getJavaFileClassName(source);
+  let prepared = source;
+
+  if (!hasJavaMainMethod(prepared)) {
+    if (/class\s+TreeNode\b/.test(prepared) && /\bisValidBST\s*\(/.test(prepared)) {
+      prepared = injectMainIntoClass(prepared, fileClassName, [
+        "TreeNode root = new TreeNode(2);",
+        "root.left = new TreeNode(1);",
+        "root.right = new TreeNode(3);",
+        `${fileClassName} solver = new ${fileClassName}();`,
+        "System.out.println(solver.isValidBST(root));",
+      ]);
+    } else {
+      prepared = injectMainIntoClass(prepared, fileClassName, [
+        `${fileClassName} solver = new ${fileClassName}();`,
+        "System.out.println(solver);",
+      ]);
+    }
+  }
+
+  const runClassName = findJavaMainClass(prepared) ?? fileClassName;
+  return { source: prepared, fileClassName, runClassName };
+}
+
+export function instrumentJava(
+  source: string,
+  fileClassName = getJavaFileClassName(source)
+): { code: string; className: string } {
+  const className = fileClassName;
   const fields = extractFields(source);
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const output: string[] = [];

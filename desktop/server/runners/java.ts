@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import type { VisualizationResult, VisualizationStep } from "../../shared/types";
-import { instrumentJava } from "../java-tracer/instrument";
+import { instrumentJava, prepareJavaSource } from "../java-tracer/instrument";
 import { resolveTracerFile } from "../services/tracer-paths";
 
 const RUN_TIMEOUT_MS = 12000;
@@ -69,8 +69,12 @@ export function visualizeJava(code: string): VisualizationResult {
     fs.mkdirSync(traceRuntimeDir, { recursive: true });
     fs.copyFileSync(resolveTraceRuntime(), path.join(traceRuntimeDir, "Trace.java"));
 
-    const { code: instrumented, className } = instrumentJava(code);
-    const userFile = path.join(tmp, `${className}.java`);
+    const prepared = prepareJavaSource(code);
+    const { code: instrumented, className: fileClassName } = instrumentJava(
+      prepared.source,
+      prepared.fileClassName
+    );
+    const userFile = path.join(tmp, `${fileClassName}.java`);
     fs.writeFileSync(userFile, instrumented);
 
     const compile = runCommand("javac", [path.join(traceRuntimeDir, "Trace.java"), userFile], tmp);
@@ -85,7 +89,7 @@ export function visualizeJava(code: string): VisualizationResult {
       };
     }
 
-    const run = runCommand("java", ["-cp", tmp, className], tmp);
+    const run = runCommand("java", ["-cp", tmp, prepared.runClassName], tmp);
     if (run.status !== 0 && !run.stdout.includes(JSON_MARKER)) {
       return {
         language: "java",
