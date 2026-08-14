@@ -2,6 +2,7 @@ package codeviz;
 
 import java.util.*;
 import java.io.*;
+import java.lang.reflect.Field;
 
 public class Trace {
     private static final List<Map<String, Object>> steps = new ArrayList<>();
@@ -106,7 +107,71 @@ public class Trace {
         if (value instanceof Queue<?>) return value.toString();
         if (value instanceof Set<?>) return value.toString();
         if (value.getClass().isArray()) return Arrays.deepToString((Object[]) value);
+        String tree = trySerializeTreeNode(value, new IdentityHashMap<>());
+        if (tree != null) return tree;
         return String.valueOf(value);
+    }
+
+    private static Field findField(Class<?> type, String name) {
+        Class<?> current = type;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(name);
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
+    }
+
+    private static String trySerializeTreeNode(Object value, IdentityHashMap<Object, Boolean> visited) {
+        if (value == null) return null;
+        try {
+            Class<?> type = value.getClass();
+            Field valField = findField(type, "val");
+            Field leftField = findField(type, "left");
+            Field rightField = findField(type, "right");
+            if (valField == null || leftField == null || rightField == null) return null;
+
+            valField.setAccessible(true);
+            leftField.setAccessible(true);
+            rightField.setAccessible(true);
+            return serializeTreeNode(value, valField, leftField, rightField, visited);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static String serializeTreeNode(
+        Object node,
+        Field valField,
+        Field leftField,
+        Field rightField,
+        IdentityHashMap<Object, Boolean> visited
+    ) throws IllegalAccessException {
+        if (node == null) return "null";
+        if (visited.containsKey(node)) {
+            Object val = valField.get(node);
+            return "{\"val\":" + val + ",\"left\":null,\"right\":null,\"cycle\":true}";
+        }
+        visited.put(node, true);
+
+        Object val = valField.get(node);
+        Object left = leftField.get(node);
+        Object right = rightField.get(node);
+
+        String leftJson = left == null
+            ? "null"
+            : trySerializeTreeNode(left, visited) != null
+                ? serializeTreeNode(left, valField, leftField, rightField, visited)
+                : "null";
+        String rightJson = right == null
+            ? "null"
+            : trySerializeTreeNode(right, visited) != null
+                ? serializeTreeNode(right, valField, leftField, rightField, visited)
+                : "null";
+
+        return "{\"val\":" + val + ",\"left\":" + leftJson + ",\"right\":" + rightJson + "}";
     }
 
     @SuppressWarnings("unchecked")

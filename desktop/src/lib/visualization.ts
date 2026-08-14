@@ -1,6 +1,14 @@
 import type { VisualizationVariable } from "@shared/types";
 
 const ARRAY_NAME_PRIORITY = ["arr", "array", "data", "nums", "values", "a", "items"];
+const TREE_NAME_PRIORITY = ["root", "node", "head", "tree"];
+
+export type TreeNodeData = {
+  val: number;
+  left: TreeNodeData | null;
+  right: TreeNodeData | null;
+  cycle?: boolean;
+};
 
 export function parseArrayValue(value: string): number[] | null {
   const trimmed = value.trim();
@@ -49,6 +57,57 @@ export function parseMatrixValue(value: string): number[][] | null {
   const width = rows[0]!.length;
   if (!rows.every((row) => row!.length === width)) return null;
   return rows as number[][];
+}
+
+export function parseTreeValue(value: string): TreeNodeData | null {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") || !trimmed.includes('"val"')) return null;
+  try {
+    return normalizeTreeNode(JSON.parse(trimmed));
+  } catch {
+    return null;
+  }
+}
+
+function normalizeTreeNode(node: unknown): TreeNodeData | null {
+  if (node === null || node === undefined) return null;
+  if (typeof node !== "object") return null;
+  const record = node as Record<string, unknown>;
+  if (!("val" in record)) return null;
+  const val = Number(record.val);
+  if (!Number.isFinite(val)) return null;
+  return {
+    val,
+    left: record.left === null || record.left === undefined ? null : normalizeTreeNode(record.left),
+    right:
+      record.right === null || record.right === undefined ? null : normalizeTreeNode(record.right),
+    cycle: record.cycle === true,
+  };
+}
+
+export function findBestTreeVariable(
+  variables: VisualizationVariable[]
+): { variable: VisualizationVariable; data: TreeNodeData } | null {
+  for (const name of TREE_NAME_PRIORITY) {
+    const variable = variables.find((entry) => entry.name.toLowerCase() === name);
+    if (!variable) continue;
+    const data = parseTreeValue(variable.value);
+    if (data) return { variable, data };
+  }
+
+  for (const variable of variables) {
+    const data = parseTreeValue(variable.value);
+    if (data) return { variable, data };
+  }
+
+  return null;
+}
+
+export function getActiveTreeNodeVal(variables: VisualizationVariable[]): number | undefined {
+  const nodeVar = variables.find((entry) => entry.name === "node");
+  if (!nodeVar) return undefined;
+  const data = parseTreeValue(nodeVar.value);
+  return data?.val;
 }
 
 export function parseGraphValue(value: string): Array<{ node: string; edges: string }> | null {

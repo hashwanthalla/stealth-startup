@@ -2,15 +2,93 @@ import {
   diffVariableNames,
   findBestArrayVariable,
   findBestMatrixVariable,
+  findBestTreeVariable,
+  getActiveTreeNodeVal,
   inferHighlightIndices,
   parseArrayValue,
   parseGraphValue,
   parseMatrixValue,
+  type TreeNodeData,
 } from "@/lib/visualization";
 import { cn } from "@/lib/utils";
 import type { VisualizationStep, VisualizationVariable } from "@shared/types";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
+
+function TreeNodeView({
+  node,
+  highlightVal,
+}: {
+  node: TreeNodeData;
+  highlightVal?: number;
+}) {
+  const active = highlightVal === node.val;
+  const hasChildren = Boolean(node.left || node.right);
+
+  return (
+    <div className="flex flex-col items-center">
+      <div
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-full border-2 font-mono text-sm font-semibold tabular-nums",
+          active
+            ? "border-amber-400 bg-amber-500/20 text-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.35)]"
+            : "border-brand-500/70 bg-slate-900 text-slate-100"
+        )}
+      >
+        {node.val}
+      </div>
+      {hasChildren ? (
+        <div className="relative mt-3 flex min-w-[8rem] justify-center gap-10 pt-3">
+          <div className="pointer-events-none absolute left-1/2 top-0 h-3 w-px -translate-x-1/2 bg-slate-600" />
+          {node.left ? (
+            <div className="relative flex flex-col items-center">
+              <div className="pointer-events-none absolute -top-3 left-1/2 h-3 w-12 -translate-x-1/2 border-l border-t border-slate-600" />
+              <TreeNodeView node={node.left} highlightVal={highlightVal} />
+            </div>
+          ) : (
+            <div className="w-10" />
+          )}
+          {node.right ? (
+            <div className="relative flex flex-col items-center">
+              <div className="pointer-events-none absolute -top-3 right-1/2 h-3 w-12 translate-x-1/2 border-r border-t border-slate-600" />
+              <TreeNodeView node={node.right} highlightVal={highlightVal} />
+            </div>
+          ) : (
+            <div className="w-10" />
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TreeView({
+  data,
+  label,
+  highlightVal,
+}: {
+  data: TreeNodeData;
+  label: string;
+  highlightVal?: number;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+        {highlightVal !== undefined ? (
+          <p className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs text-amber-300">
+            Visiting node {highlightVal}
+          </p>
+        ) : null}
+      </div>
+      <div className="viz-scrollbar overflow-x-auto pb-2">
+        <div className="flex min-w-min justify-center px-4 py-2">
+          <TreeNodeView node={data} highlightVal={highlightVal} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function MatrixGrid({
   values,
@@ -164,12 +242,14 @@ export function VisualizationPlayer({
   const arrayValues = arrayVariable ? parseArrayValue(arrayVariable.value) : null;
   const matrixVariable = step ? findBestMatrixVariable(step.variables) : null;
   const matrixValues = matrixVariable ? parseMatrixValue(matrixVariable.value) : null;
+  const treeResult = step ? findBestTreeVariable(step.variables) : null;
   const highlightIndices = useMemo(() => {
     if (!step) return [];
     const fromStep = step.highlights ?? [];
     const inferred = inferHighlightIndices(step.variables);
     return [...new Set([...fromStep, ...inferred])];
   }, [step]);
+  const activeTreeNodeVal = step ? getActiveTreeNodeVal(step.variables) : undefined;
   const matrixPosition = useMemo(() => {
     if (!step) return { row: undefined, col: undefined };
     const byName = new Map(step.variables.map((variable) => [variable.name, variable.value]));
@@ -258,6 +338,14 @@ export function VisualizationPlayer({
           className="viz-range mt-4 w-full"
         />
       </div>
+
+      {treeResult ? (
+        <TreeView
+          data={treeResult.data}
+          label={treeResult.variable.name}
+          highlightVal={activeTreeNodeVal}
+        />
+      ) : null}
 
       {matrixValues && matrixValues.length > 0 ? (
         <MatrixGrid
