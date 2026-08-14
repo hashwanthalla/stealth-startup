@@ -14,3 +14,15 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.monaco-editor .execution-line-highlight {
+  background-color: rgba(109, 40, 217, 0.22) !important;
+  border-left: 3px solid #7c3aed;
+}
+
+.monaco-editor .execution-line-glyph {
+  background-color: #7c3aed;
+  border-radius: 999px;
+  margin-left: 4px;
+  width: 8px !important;
+}
