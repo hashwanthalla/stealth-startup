@@ -23,13 +23,32 @@ const JAVA_TYPE_KEYWORDS = new Set([
   "return",
   "catch",
   "final",
+  "true",
+  "false",
+  "null",
 ]);
 
+function stripComment(line: string) {
+  return line.replace(/\/\/.*$/, "").trim();
+}
+
 function endsWithCompletedStatement(trimmed: string) {
-  const line = trimmed.replace(/\/\/.*$/, "").trim();
+  const line = stripComment(trimmed);
   if (!line) return false;
   if (/^\{.*\},?$/.test(line)) return false;
   return line.endsWith(";");
+}
+
+function isIncompleteStatement(trimmed: string) {
+  const line = stripComment(trimmed);
+  if (!line) return false;
+  if (line.endsWith("&&") || line.endsWith("||") || line.endsWith(",") || line.endsWith("(")) {
+    return true;
+  }
+  if (/^\s*return\b/.test(line) && !line.endsWith(";")) {
+    return true;
+  }
+  return false;
 }
 
 function indentOf(line: string) {
@@ -142,12 +161,14 @@ export function instrumentJava(source: string): { code: string; className: strin
   let isStaticMethod = false;
   let pendingMethod: { name: string; params: string[]; indent: string; isStatic: boolean } | null =
     null;
+  let inReturnExpression = false;
 
   const beginMethod = (name: string, params: string[], indent: string, isStatic: boolean) => {
     methodDepth = braceDepth;
     methodParams = new Set(params);
     blockScopes = [new Set()];
     isStaticMethod = isStatic;
+    inReturnExpression = false;
 
     if (name === "main") {
       mainDepth = braceDepth;
@@ -240,7 +261,9 @@ export function instrumentJava(source: string): { code: string; className: strin
       methodDepth !== null &&
       isExecutableLine(trimmed) &&
       !SKIP_LINE.test(trimmed) &&
-      endsWithCompletedStatement(trimmed);
+      endsWithCompletedStatement(trimmed) &&
+      !isIncompleteStatement(trimmed) &&
+      !inReturnExpression;
 
     const traceVars = shouldTrace
       ? activeVariables(methodParams, blockScopes, fields, isStaticMethod)
@@ -255,6 +278,21 @@ export function instrumentJava(source: string): { code: string; className: strin
 
     if (shouldTrace && !isReturnLikeLine(trimmed) && traceLine) {
       output.push(traceLine);
+    }
+
+    const stripped = stripComment(trimmed);
+    if (/^\s*return\b/.test(stripped)) {
+      inReturnExpression = !stripped.endsWith(";");
+    } else if (inReturnExpression) {
+      if (stripped.endsWith(";")) {
+        inReturnExpression = false;
+      } else if (
+        !stripped.endsWith("&&") &&
+        !stripped.endsWith("||") &&
+        !stripped.endsWith(",")
+      ) {
+        inReturnExpression = false;
+      }
     }
 
     if (methodDepth !== null && opens > 0) {
@@ -275,6 +313,7 @@ export function instrumentJava(source: string): { code: string; className: strin
         methodDepth = null;
         methodParams = new Set();
         blockScopes = [];
+        inReturnExpression = false;
       }
     }
   }
