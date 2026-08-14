@@ -3,16 +3,30 @@ export function indentOf(line: string) {
 }
 
 export function parseCStyleParams(signature: string): string[] {
+  return parseCStyleParamParts(signature).map((part) => part.name);
+}
+
+export function parseCStyleParamParts(signature: string): Array<{ name: string; traceable: boolean }> {
   return signature
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean)
     .map((part) => {
-      const cleaned = part.replace(/\.\.\./g, "").replace(/\*/g, "").trim();
+      const cleaned = part.replace(/\.\.\./g, "").trim();
       const tokens = cleaned.split(/\s+/);
-      return tokens[tokens.length - 1]?.replace(/\[|\]/g, "") ?? "";
+      const name = tokens[tokens.length - 1]?.replace(/\[|\]/g, "") ?? "";
+      return { name, traceable: isTraceableDeclaration(cleaned) };
     })
-    .filter(Boolean);
+    .filter((part) => Boolean(part.name));
+}
+
+export function isTraceableDeclaration(declaration: string): boolean {
+  const trimmed = declaration.trim();
+  if (!trimmed) return false;
+  if (/[\[\*]/.test(trimmed)) return false;
+  if (/\b(vector|string|map|set|list|array|slice|chan|interface|struct)\b/i.test(trimmed)) return false;
+  if (/&\s*[A-Za-z_]\w*$/.test(trimmed)) return false;
+  return /\b(int|long|short|float|double|bool|char|size_t|unsigned|signed|auto|var|byte|rune)\b/i.test(trimmed);
 }
 
 export function extractCStyleDeclarations(line: string): string[] {
@@ -53,14 +67,25 @@ export class ScopeTracker {
   private methodParams = new Set<string>();
   private blockScopes: Set<string>[] = [];
   private fields = new Set<string>();
+  private nonTraceable = new Set<string>();
 
   constructor(fields: string[] = []) {
     this.fields = new Set(fields);
   }
 
-  enterMethod(params: string[]) {
+  enterMethod(params: string[] | Array<{ name: string; traceable: boolean }>) {
     this.methodDepth = this.braceDepth;
-    this.methodParams = new Set(params);
+    this.methodParams = new Set();
+    this.nonTraceable = new Set();
+
+    for (const param of params) {
+      if (typeof param === "string") {
+        this.methodParams.add(param);
+      } else {
+        this.methodParams.add(param.name);
+        if (!param.traceable) this.nonTraceable.add(param.name);
+      }
+    }
     this.blockScopes = [new Set()];
   }
 
@@ -86,6 +111,9 @@ export class ScopeTracker {
     if (this.methodDepth === null || this.blockScopes.length === 0) return;
     for (const name of extractCStyleDeclarations(line)) {
       this.blockScopes[this.blockScopes.length - 1].add(name);
+      if (!isTraceableDeclaration(line)) {
+        this.nonTraceable.add(name);
+      }
     }
   }
 
@@ -98,7 +126,7 @@ export class ScopeTracker {
     for (const scope of this.blockScopes) {
       for (const variable of scope) names.add(variable);
     }
-    return Array.from(names);
+    return Array.from(names).filter((name) => !this.nonTraceable.has(name));
   }
 
   inMethod() {

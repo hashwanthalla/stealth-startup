@@ -40,13 +40,32 @@ function parse(stdout: string): VisualizationResult {
   };
 }
 
+function stripGoHeader(source: string): string {
+  return source
+    .replace(/\r\n/g, "\n")
+    .replace(/^package\s+main\s*\n/m, "")
+    .replace(/^import\s+(?:\([\s\S]*?\)|"[^"]+")\s*\n/gm, "")
+    .trimStart();
+}
+
 export function visualizeGo(code: string): VisualizationResult {
   const tmp = makeTempDir();
   try {
     const runtime = fs.readFileSync(resolve("trace.go"), "utf8");
-    const instrumented = instrumentGo(code);
+    const instrumented = stripGoHeader(instrumentGo(code));
     fs.writeFileSync(path.join(tmp, "main.go"), `${runtime}\n\n${instrumented}`);
     const exec = run("go", ["run", "main.go"], tmp);
+    const execError = exec.error as NodeJS.ErrnoException | undefined;
+    if (execError?.code === "ENOENT") {
+      return {
+        language: "go",
+        success: false,
+        steps: [],
+        finalOutput: "",
+        error: "go is not installed or not on PATH. Install Go to visualize Go code.",
+        visualizationLevel: "full",
+      };
+    }
     if (exec.status !== 0 && !String(exec.stdout).includes(JSON_MARKER)) {
       return { language: "go", success: false, steps: [], finalOutput: exec.stdout, error: exec.stderr || exec.stdout, visualizationLevel: "full" };
     }

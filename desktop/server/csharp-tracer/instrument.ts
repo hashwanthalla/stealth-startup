@@ -1,4 +1,4 @@
-import { ScopeTracker, indentOf, isReturnLikeLine, isSkippableLine, parseCStyleParams } from "../instrument/scope";
+import { ScopeTracker, indentOf, isReturnLikeLine, isSkippableLine, parseCStyleParamParts } from "../instrument/scope";
 
 const METHOD_PATTERN =
   /^(?:(?:public|private|protected|internal)\s+)?(?:static\s+)?[\w<>,\[\]\s]+\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)\s*\{?\s*$/;
@@ -25,7 +25,7 @@ export function instrumentCSharp(source: string): { code: string; className: str
   const scope = new ScopeTracker(extractFields(source));
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const output: string[] = [];
-  let pendingMethod: { name: string; params: string[]; indent: string } | null = null;
+  let pendingMethod: { name: string; params: Array<{ name: string; traceable: boolean }>; indent: string } | null = null;
   let mainDepth: number | null = null;
   let tryDepth: number | null = null;
   let braceDepth = 0;
@@ -56,7 +56,7 @@ export function instrumentCSharp(source: string): { code: string; className: str
 
     const methodMatch = trimmed.match(METHOD_PATTERN);
     if (methodMatch && !trimmed.endsWith("{")) {
-      pendingMethod = { name: methodMatch[1], params: parseCStyleParams(methodMatch[2] ?? ""), indent };
+      pendingMethod = { name: methodMatch[1], params: parseCStyleParamParts(methodMatch[2] ?? ""), indent };
       output.push(line);
       continue;
     }
@@ -64,7 +64,7 @@ export function instrumentCSharp(source: string): { code: string; className: str
     if (methodMatch && trimmed.endsWith("{")) {
       output.push(line);
       braceDepth = newDepth;
-      scope.enterMethod(parseCStyleParams(methodMatch[2] ?? ""));
+      scope.enterMethod(parseCStyleParamParts(methodMatch[2] ?? ""));
       if (methodMatch[1] === "Main") {
         mainDepth = braceDepth;
         tryDepth = braceDepth + 1;

@@ -11,8 +11,71 @@ function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "codeviz-csharp-"));
 }
 
-function run(cmd: string, args: string[], cwd?: string) {
-  return spawnSync(cmd, args, { cwd, encoding: "utf8", timeout: 12000, maxBuffer: 4 * 1024 * 1024 });
+type CommandResult = {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  error?: NodeJS.ErrnoException;
+};
+
+function run(cmd: string, args: string[], cwd?: string): CommandResult {
+  const result = spawnSync(cmd, args, { cwd, encoding: "utf8", timeout: 12000, maxBuffer: 4 * 1024 * 1024 });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    error: result.error as NodeJS.ErrnoException | undefined,
+  };
+}
+
+function missingCommandError(command: string, result: CommandResult) {
+  if (result.error?.code === "ENOENT") {
+    return `${command} is not installed or not on PATH. Install it to visualize C# code.`;
+  }
+  return "";
+}
+
+function resolveCSharpCompiler() {
+  for (const command of ["csc", "mcs", "dotnet"]) {
+    const probe = run(command, command === "dotnet" ? ["--version"] : ["/help"]);
+    if (!probe.error || probe.error.code !== "ENOENT") return command;
+  }
+  return null;
+}
+
+function compileAndRunCSharp(tmp: string): CommandResult {
+  const compiler = resolveCSharpCompiler();
+  if (!compiler) {
+    return {
+      status: 1,
+      stdout: "",
+      stderr: "No C# compiler found. Install the .NET SDK (dotnet) or Mono (mcs).",
+    };
+  }
+
+  if (compiler === "dotnet") {
+    fs.writeFileSync(
+      path.join(tmp, "CodevizApp.csproj"),
+      `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+</Project>`
+    );
+    const build = run("dotnet", ["run", "--project", tmp], tmp);
+    return build;
+  }
+
+  const compile = run(compiler, compiler === "csc" ? ["/nologo", "Trace.cs", "Program.cs"] : ["Trace.cs", "Program.cs"], tmp);
+  if (compile.status !== 0) return compile;
+  const executable =
+    compiler === "csc"
+      ? path.join(tmp, "Program.exe")
+      : path.join(tmp, "Program.exe");
+  return run(executable, [], tmp);
 }
 
 function resolve(file: string) {
@@ -48,11 +111,18 @@ export function visualizeCSharp(code: string): VisualizationResult {
     const { code: instrumented } = instrumentCSharp(code);
     fs.copyFileSync(resolve("Trace.cs"), path.join(tmp, "Trace.cs"));
     fs.writeFileSync(path.join(tmp, "Program.cs"), instrumented);
-    const compile = run("csc", ["/nologo", "Trace.cs", "Program.cs"], tmp);
-    if (compile.status !== 0) {
-      return { language: "csharp", success: false, steps: [], finalOutput: "", error: compile.stderr || compile.stdout, visualizationLevel: "full" };
+    const exec = compileAndRunCSharp(tmp);
+    if (exec.status !== 0 && !String(exec.stdout).includes(JSON_MARKER)) {
+      const missing = missingCommandError("dotnet", exec);
+      return {
+        language: "csharp",
+        success: false,
+        steps: [],
+        finalOutput: exec.stdout,
+        error: missing || exec.stderr || exec.stdout || "C# execution failed",
+        visualizationLevel: "full",
+      };
     }
-    const exec = run(path.join(tmp, "Program.exe"), [], tmp);
     return parse(exec.stdout ?? "");
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

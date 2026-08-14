@@ -39,8 +39,31 @@ static void json_escape(const char *input, char *out, size_t out_size) {
   size_t j = 0;
   for (size_t i = 0; input[i] != '\0' && j + 2 < out_size; i++) {
     char c = input[i];
-    if (c == '"' || c == '\\') out[j++] = '\\';
-    if (j + 1 < out_size) out[j++] = c;
+    if (c == '"' || c == '\\') {
+      out[j++] = '\\';
+      if (j + 1 >= out_size) break;
+      out[j++] = c;
+      continue;
+    }
+    if (c == '\n') {
+      out[j++] = '\\';
+      if (j + 1 >= out_size) break;
+      out[j++] = 'n';
+      continue;
+    }
+    if (c == '\r') {
+      out[j++] = '\\';
+      if (j + 1 >= out_size) break;
+      out[j++] = 'r';
+      continue;
+    }
+    if (c == '\t') {
+      out[j++] = '\\';
+      if (j + 1 >= out_size) break;
+      out[j++] = 't';
+      continue;
+    }
+    out[j++] = c;
   }
   out[j] = '\0';
 }
@@ -52,7 +75,7 @@ void codeviz_install(void) {
 
 char *codeviz_int(long long value) {
   char *buffer = (char *)malloc(32);
-  if (!buffer) return "";
+  if (!buffer) return (char *)"";
   snprintf(buffer, 32, "%lld", value);
   return buffer;
 }
@@ -60,7 +83,7 @@ char *codeviz_int(long long value) {
 char *codeviz_string(const char *value) {
   if (!value) return codeviz_int(0);
   char *buffer = (char *)malloc(strlen(value) + 1);
-  if (!buffer) return "";
+  if (!buffer) return (char *)"";
   strcpy(buffer, value);
   return buffer;
 }
@@ -88,36 +111,37 @@ void codeviz_fail(const char *message) {
 }
 
 void codeviz_emit(void) {
-  printf("%s{", CODEVIZ_JSON_MARKER);
-  printf("\"success\":%s,", failed ? "false" : "true");
-  printf("\"visualizationLevel\":\"full\",");
-  printf("\"finalOutput\":\"");
+  FILE *out = stdout;
+  fprintf(out, "%s{", CODEVIZ_JSON_MARKER);
+  fprintf(out, "\"success\":%s,", failed ? "false" : "true");
+  fprintf(out, "\"visualizationLevel\":\"full\",");
+  fprintf(out, "\"finalOutput\":\"");
   char escaped[CODEVIZ_MAX_OUTPUT * 2];
   json_escape(output_buffer, escaped, sizeof(escaped));
-  printf("%s\",", escaped);
+  fprintf(out, "%s\",", escaped);
   if (failed) {
     char err[1024];
     json_escape(fail_message, err, sizeof(err));
-    printf("\"error\":\"%s\",", err);
+    fprintf(out, "\"error\":\"%s\",", err);
   }
-  printf("\"steps\":[");
+  fprintf(out, "\"steps\":[");
   for (int i = 0; i < step_count; i++) {
     CodevizStep *step = &steps[i];
-    if (i > 0) printf(",");
-    printf("{\"step\":%d,\"line\":%d,\"message\":\"Executing line %d\",\"variables\":[", i + 1, step->line, step->line);
+    if (i > 0) fprintf(out, ",");
+    fprintf(out, "{\"step\":%d,\"line\":%d,\"message\":\"Executing line %d\",\"variables\":[", i + 1, step->line, step->line);
     for (int j = 0; j < step->var_count; j++) {
       char name[256];
       char value[1024];
       json_escape(step->names[j], name, sizeof(name));
       json_escape(step->values[j], value, sizeof(value));
-      if (j > 0) printf(",");
-      printf("{\"name\":\"%s\",\"value\":\"%s\"}", name, value);
+      if (j > 0) fprintf(out, ",");
+      fprintf(out, "{\"name\":\"%s\",\"value\":\"%s\"}", name, value);
     }
-    printf("],\"output\":\"");
+    fprintf(out, "],\"output\":\"");
     json_escape(output_buffer, escaped, sizeof(escaped));
-    printf("\"}");
+    fprintf(out, "\"}");
   }
-  printf("]}\n");
+  fprintf(out, "]}\n");
 }
 
 int codeviz_printf(const char *format, ...) {

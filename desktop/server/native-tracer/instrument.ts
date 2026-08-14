@@ -1,4 +1,4 @@
-import { ScopeTracker, indentOf, isReturnLikeLine, isSkippableLine, parseCStyleParams } from "../instrument/scope";
+import { ScopeTracker, indentOf, isReturnLikeLine, isSkippableLine, parseCStyleParamParts } from "../instrument/scope";
 
 const FUNCTION_PATTERN =
   /^(?:static\s+)?(?:inline\s+)?(?:const\s+)?(?:unsigned\s+|signed\s+)?(?:int|long|short|float|double|bool|char|void|auto|[\w:<>,\s*&]+)\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)\s*\{?\s*$/;
@@ -23,13 +23,13 @@ export function instrumentNative(
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const output: string[] = [];
   const scope = new ScopeTracker();
-  let pendingFunction: { name: string; params: string[]; indent: string } | null = null;
+  let pendingFunction: { name: string; params: Array<{ name: string; traceable: boolean }>; indent: string } | null = null;
   let wrappedMain = false;
 
   const header =
     lang === "cpp"
-      ? `#include "trace_wrap.h"\n#include <string>\n`
-      : `#include "trace_wrap.h"\n`;
+      ? `#include "trace_wrap.h"\n#include <cstdlib>\n#include <string>\n`
+      : `#include "trace_wrap.h"\n#include <stdlib.h>\n`;
 
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
@@ -45,6 +45,7 @@ export function instrumentNative(
       scope.enterMethod(pendingFunction.params);
       if (pendingFunction.name === "main") {
         output.push(`${indent}  codeviz_install();`);
+        output.push(`${indent}  atexit(codeviz_emit);`);
         wrappedMain = true;
       }
       pendingFunction = null;
@@ -53,7 +54,7 @@ export function instrumentNative(
 
     const fnMatch = trimmed.match(FUNCTION_PATTERN);
     if (fnMatch && !trimmed.endsWith("{")) {
-      pendingFunction = { name: fnMatch[1], params: parseCStyleParams(fnMatch[2] ?? ""), indent };
+      pendingFunction = { name: fnMatch[1], params: parseCStyleParamParts(fnMatch[2] ?? ""), indent };
       output.push(line);
       continue;
     }
@@ -61,9 +62,10 @@ export function instrumentNative(
     if (fnMatch && trimmed.endsWith("{")) {
       output.push(line);
       scope.updateDepth(opens, closes);
-      scope.enterMethod(parseCStyleParams(fnMatch[2] ?? ""));
+      scope.enterMethod(parseCStyleParamParts(fnMatch[2] ?? ""));
       if (fnMatch[1] === "main") {
         output.push(`${indent}  codeviz_install();`);
+        output.push(`${indent}  atexit(codeviz_emit);`);
         wrappedMain = true;
       }
       continue;
@@ -88,12 +90,6 @@ export function instrumentNative(
   let instrumented = output.join("\n");
   if (!instrumented.includes("trace_wrap.h")) {
     instrumented = header + instrumented;
-  }
-  if (wrappedMain && !instrumented.includes("codeviz_emit")) {
-    instrumented = instrumented.replace(
-      /(int\s+main\s*\([^)]*\)\s*\{[\s\S]*?)(\n\})/,
-      `$1\n  codeviz_emit();\n$2`
-    );
   }
 
   return { code: instrumented, hasMain: /int\s+main\s*\(/.test(source) };

@@ -28,8 +28,8 @@ function resolveTracerFile(name: string) {
 }
 
 function parseResult(stdout: string, language: VisualizationResult["language"]): VisualizationResult {
-  const jsonLine = stdout.split("\n").reverse().find((line) => line.includes(JSON_MARKER));
-  if (!jsonLine) {
+  const markerIndex = stdout.lastIndexOf(JSON_MARKER);
+  if (markerIndex === -1) {
     return {
       language,
       success: false,
@@ -39,7 +39,7 @@ function parseResult(stdout: string, language: VisualizationResult["language"]):
       visualizationLevel: "execution",
     };
   }
-  const payload = JSON.parse(jsonLine.slice(jsonLine.indexOf(JSON_MARKER) + JSON_MARKER.length));
+  const payload = JSON.parse(stdout.slice(markerIndex + JSON_MARKER.length).trim());
   return {
     language,
     success: Boolean(payload.success),
@@ -59,9 +59,25 @@ export function visualizeC(code: string): VisualizationResult {
     fs.copyFileSync(resolveTracerFile("trace_wrap.h"), path.join(tmp, "trace_wrap.h"));
     fs.writeFileSync(path.join(tmp, "main.c"), instrumented);
 
-    const compile = run("gcc", ["-include", path.join(tmp, "trace_wrap.h"), "trace.c", "main.c", "-o", "main"], tmp);
-    if (compile.status !== 0) {
-      return { language: "c", success: false, steps: [], finalOutput: "", error: compile.stderr || compile.stdout, visualizationLevel: "full" };
+    const compileTrace = run("gcc", ["-c", "trace.c", "-o", "trace.o"], tmp);
+    const compileMain = run(
+      "gcc",
+      ["-c", "-include", path.join(tmp, "trace_wrap.h"), "main.c", "-o", "main.o"],
+      tmp
+    );
+    if (compileTrace.status !== 0 || compileMain.status !== 0) {
+      return {
+        language: "c",
+        success: false,
+        steps: [],
+        finalOutput: "",
+        error: compileTrace.stderr || compileMain.stderr || compileTrace.stdout || compileMain.stdout,
+        visualizationLevel: "full",
+      };
+    }
+    const link = run("gcc", ["trace.o", "main.o", "-o", "main"], tmp);
+    if (link.status !== 0) {
+      return { language: "c", success: false, steps: [], finalOutput: "", error: link.stderr || link.stdout, visualizationLevel: "full" };
     }
     const exec = run(path.join(tmp, "main"), [], tmp);
     return parseResult(exec.stdout ?? "", "c");
@@ -79,13 +95,25 @@ export function visualizeCpp(code: string): VisualizationResult {
     fs.copyFileSync(resolveTracerFile("trace_wrap.h"), path.join(tmp, "trace_wrap.h"));
     fs.writeFileSync(path.join(tmp, "main.cpp"), instrumented);
 
-    const compile = run(
+    const compileTrace = run("g++", ["-std=c++17", "-c", "trace.c", "-o", "trace.o"], tmp);
+    const compileMain = run(
       "g++",
-      ["-std=c++17", "-include", path.join(tmp, "trace_wrap.h"), "trace.c", "main.cpp", "-o", "main"],
+      ["-std=c++17", "-c", "-include", path.join(tmp, "trace_wrap.h"), "main.cpp", "-o", "main.o"],
       tmp
     );
-    if (compile.status !== 0) {
-      return { language: "cpp", success: false, steps: [], finalOutput: "", error: compile.stderr || compile.stdout, visualizationLevel: "full" };
+    if (compileTrace.status !== 0 || compileMain.status !== 0) {
+      return {
+        language: "cpp",
+        success: false,
+        steps: [],
+        finalOutput: "",
+        error: compileTrace.stderr || compileMain.stderr || compileTrace.stdout || compileMain.stdout,
+        visualizationLevel: "full",
+      };
+    }
+    const link = run("g++", ["-std=c++17", "trace.o", "main.o", "-o", "main"], tmp);
+    if (link.status !== 0) {
+      return { language: "cpp", success: false, steps: [], finalOutput: "", error: link.stderr || link.stdout, visualizationLevel: "full" };
     }
     const exec = run(path.join(tmp, "main"), [], tmp);
     return parseResult(exec.stdout ?? "", "cpp");

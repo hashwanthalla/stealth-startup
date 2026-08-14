@@ -1,4 +1,4 @@
-import { ScopeTracker, indentOf, isReturnLikeLine, isSkippableLine, parseCStyleParams } from "../instrument/scope";
+import { ScopeTracker, indentOf, isReturnLikeLine, isSkippableLine, parseCStyleParamParts } from "../instrument/scope";
 
 const FUNC_PATTERN = /^func\s+(?:\([^)]+\)\s+)?([A-Za-z_][\w]*)\s*\(([^)]*)\)\s*\{/;
 
@@ -26,9 +26,10 @@ export function instrumentGo(source: string): string {
     if (fnMatch) {
       output.push(line);
       scope.updateDepth(opens, closes);
-      scope.enterMethod(parseCStyleParams(fnMatch[2] ?? ""));
+      scope.enterMethod(parseCStyleParamParts(fnMatch[2] ?? ""));
       if (fnMatch[1] === "main") {
         output.push(`${indent}\ttraceInstall()`);
+        output.push(`${indent}\tdefer traceEmit()`);
         wrappedMain = true;
       }
       continue;
@@ -54,8 +55,5 @@ export function instrumentGo(source: string): string {
   }
 
   let instrumented = output.join("\n");
-  if (wrappedMain && !instrumented.includes("traceEmit()")) {
-    instrumented = instrumented.replace(/(func\s+main\s*\([^)]*\)\s*\{[\s\S]*?)(\n\})/, `$1\n\ttraceEmit()\n$2`);
-  }
   return instrumented;
 }
