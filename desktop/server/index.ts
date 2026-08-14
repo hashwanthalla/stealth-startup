@@ -1,9 +1,12 @@
 import express from "express";
 import cors from "cors";
+import { loadEnvFile } from "./env";
 import { authRoutes } from "./routes/auth";
 import { billingRoutes } from "./routes/billing";
 import { questionRoutes } from "./routes/questions";
 import { visualizeRoutes } from "./routes/visualize";
+
+loadEnvFile();
 
 export function createServer() {
   const app = express();

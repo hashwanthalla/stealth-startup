@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { TRIAL_DAYS, WEEKLY_PRICE_USD } from "@shared/types";
+import { TRIAL_DAYS, MONTHLY_PRICE_USD } from "@shared/types";
 import { useAuth } from "../context/AuthContext";
 
 export function RegisterPage() {
@@ -30,7 +30,7 @@ export function RegisterPage() {
       <form onSubmit={submit} className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/70 p-8">
         <h1 className="text-3xl font-bold text-white">Start your free trial</h1>
         <p className="mt-2 text-slate-400">
-          {TRIAL_DAYS} days free, then ${WEEKLY_PRICE_USD}/week to keep visualizing code.
+          {TRIAL_DAYS} days free, then ${MONTHLY_PRICE_USD}/month to keep visualizing code.
         </p>
 
         <div className="mt-8 space-y-4">

@@ -91,12 +91,16 @@ export const api = {
   billingStatus() {
     return request<{
       user: User;
-      weeklyPriceUsd: number;
+      monthlyPriceUsd: number;
       stripeConfigured: boolean;
+      hasAccess: boolean;
     }>("/billing/status");
   },
   createCheckout() {
     return request<{ url: string }>("/billing/checkout", { method: "POST" });
+  },
+  createBillingPortal() {
+    return request<{ url: string }>("/billing/portal", { method: "POST" });
   },
   devActivate() {
     return request<{ ok: boolean }>("/billing/dev-activate", { method: "POST" });

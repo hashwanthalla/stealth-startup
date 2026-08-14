@@ -38,8 +38,8 @@ Cross-platform desktop SaaS for visual DSA learning.
 ### Features
 
 - Login / registration with **7-day free trial**
-- **$10/week** Stripe subscription after trial
-- Admin panel to upload questions with starter code for all languages
+- **$2/month** Stripe subscription after trial (access revoked when trial ends)
+- Personal question library with starter and solution code per language
 - Monaco code editor
 - **Full step-by-step visualization** for Python, JavaScript, Java, C, C++, C#, and Go
 - Array bar charts, graph snapshots, variable diff highlighting, playback controls
@@ -66,6 +66,21 @@ npm run electron:dev
 ```
 
 Demo admin: `admin@codeviz.app` / `admin123`
+
+### Stripe setup ($2/month)
+
+1. Create a product in [Stripe Dashboard](https://dashboard.stripe.com) with a **$2/month** recurring price.
+2. Copy `.env.example` to `desktop/.env` and set:
+   - `STRIPE_SECRET_KEY` — your Stripe secret key
+   - `STRIPE_PRICE_ID` — the monthly price ID (e.g. `price_...`)
+   - `STRIPE_WEBHOOK_SECRET` — from Stripe CLI or dashboard webhook
+   - `APP_URL` — `http://localhost:5173` for local dev
+3. Forward webhooks locally:
+   ```bash
+   stripe listen --forward-to localhost:3847/api/billing/webhook
+   ```
+
+After the 7-day trial, users are blocked from visualizing until they subscribe. Use **Billing → Dev: activate locally** without Stripe in development.
 
 ### Language runtimes
 
