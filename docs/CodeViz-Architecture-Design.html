@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeViz — Architecture & Design Document</title>
+  <style>
+    :root {
+      --text: #1a1a1a;
+      --muted: #555;
+      --border: #e0e0e0;
+      --accent: #2563eb;
+      --bg-code: #f6f8fa;
+      --bg-table-head: #f0f4f8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text);
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+      background: #fff;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 3rem 0 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--border);
+      color: #111;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 2rem 0 0.75rem;
+      color: #222;
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+    }
+
+    p { margin: 0 0 1rem; }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+
+    .meta {
+      background: var(--bg-code);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 2.5rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .meta strong { color: var(--text); }
+
+    .toc {
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 28px;
+      margin: 2rem 0 3rem;
+    }
+
+    .toc h2 {
+      margin-top: 0;
+      border: none;
+      font-size: 1.1rem;
+      padding: 0;
+    }
+
+    .toc ol {
+      margin: 0;
+      padding-left: 1.4rem;
+    }
+
+    .toc li { margin: 0.35rem 0; }
+
+    .toc a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .toc a:hover { text-decoration: underline; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--bg-table-head);
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) td { background: #fafbfc; }
+
+    code {
+      font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.88em;
+      background: var(--bg-code);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin: 1rem 0 1.5rem;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    ul { margin: 0 0 1rem; padding-left: 1.4rem; }
+    li { margin: 0.3rem 0; }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 3rem 0;
+    }
+
+    @media print {
+      body { padding: 24px; font-size: 11pt; max-width: none; }
+      h2 { page-break-after: avoid; }
+      table, pre { page-break-inside: avoid; }
+      .toc { page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>CodeViz</h1>
+<p class="subtitle">Architecture &amp; Design Document — HLD + LLD + Code Flow</p>
+
+<div class="meta">
+  <strong>Product:</strong> Visual DSA learning platform &nbsp;|&nbsp;
+  <strong>Repository:</strong> stealth-startup &nbsp;|&nbsp;
+  <strong>Date:</strong> August 2026
+</div>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#summary">Executive Summary</a></li>
+    <li><a href="#hld">High-Level Design</a></li>
+    <li><a href="#flows">End-to-End Code Flows</a></li>
+    <li><a href="#db">Database Schema</a></li>
+    <li><a href="#api">API Reference</a></li>
+    <li><a href="#frontend">Frontend (LLD)</a></li>
+    <li><a href="#backend">Backend (LLD)</a></li>
+    <li><a href="#deploy">Electron, Docker &amp; CI</a></li>
+    <li><a href="#algoviz">AlgoViz iOS</a></li>
+    <li><a href="#stack">Technology Stack</a></li>
+  </ol>
+</nav>
+
+<!-- Content is generated from the same source as the Markdown file.
+     Open this file in any browser. Use File → Print → Save as PDF for a clean PDF. -->
+
+<section id="summary">
+<h2>1. Executive Summary</h2>
+<p><strong>CodeViz</strong> is a cross-platform data structures and algorithms (DSA) learning platform. Users write real code in seven languages, execute it on the server, and step through execution with variable diffs, array bar charts, matrix grids, and binary tree views.</p>
+
+<table>
+  <tr><th>Deployment</th><th>Description</th></tr>
+  <tr><td><strong>Desktop</strong></td><td>macOS Electron app — local API + embedded UI</td></tr>
+  <tr><td><strong>Web beta</strong></td><td>Single Docker container on Render (<code>codeviz-beta.onrender.com</code>)</td></tr>
+</table>
+
+<p>A separate <strong>AlgoViz</strong> iOS app provides curated SwiftUI animations and is <strong>not</strong> connected to the CodeViz backend.</p>
+
+<h3>Key capabilities</h3>
+<ul>
+  <li>User authentication with JWT and per-user private question libraries</li>
+  <li>Monaco code editor with per-question language switching</li>
+  <li>Step-by-step visualization via language-specific code tracers</li>
+  <li>Optional Stripe billing ($2/month, 7-day trial — disabled by default)</li>
+  <li>Support for Python, JavaScript, Java, C, C++, C#, and Go</li>
+</ul>
+</section>
+
+<section id="hld">
+<h2>2. High-Level Design</h2>
+
+<h3>2.1 System context</h3>
+<pre><code>┌─────────────────────────────────────┐
+│     Browser / Electron Window       │
+│     (React SPA + Monaco Editor)     │
+└─────────────────┬───────────────────┘
+                  │  HTTPS / localhost
+                  ▼
+┌─────────────────────────────────────┐
+│   Express API + Static SPA          │
+└────────┬────────────────┬───────────┘
+         ▼                ▼
+   SQLite DB         Language Runners + Tracers</code></pre>
+
+<h3>2.2 Major components</h3>
+<table>
+  <tr><th>Component</th><th>Location</th><th>Responsibility</th></tr>
+  <tr><td>Frontend</td><td><code>desktop/src/</code></td><td>React SPA, Monaco editor, visualization player</td></tr>
+  <tr><td>API Server</td><td><code>desktop/server/</code></td><td>Express routes: auth, billing, questions, visualize</td></tr>
+  <tr><td>Runners</td><td><code>desktop/server/runners/</code></td><td>Execute and instrument user code per language</td></tr>
+  <tr><td>Tracers</td><td><code>desktop/server/*-tracer/</code></td><td>Inject trace calls; capture steps at runtime</td></tr>
+  <tr><td>Electron Shell</td><td><code>desktop/electron/</code></td><td>Desktop packaging; spawns API on port 3847</td></tr>
+  <tr><td>Web Entry</td><td><code>desktop/server/standalone.ts</code></td><td>Single-port deploy for Docker / Render</td></tr>
+  <tr><td>Shared Types</td><td><code>desktop/shared/types.ts</code></td><td>TypeScript contracts between frontend and backend</td></tr>
+</table>
+
+<h3>2.3 Deployment</h3>
+<h4>Desktop (Electron)</h4>
+<ol>
+  <li>Electron main process starts Express on <strong>port 3847</strong></li>
+  <li>Opens BrowserWindow (Vite dev :5173 or production <code>dist/</code>)</li>
+  <li>SQLite and user data live in OS <code>userData</code> folder</li>
+</ol>
+
+<h4>Web (Docker / Render)</h4>
+<ol>
+  <li><code>standalone.ts</code> binds <code>0.0.0.0:PORT</code></li>
+  <li>Serves SPA + API from one process</li>
+  <li>Docker includes Python, GCC, JDK, Go</li>
+  <li>Data at <code>CODEVIZ_DATA_DIR</code> (<code>/app/data</code> on Render)</li>
+</ol>
+</section>
+
+<section id="flows">
+<h2>3. End-to-End Code Flows</h2>
+
+<h3>3.1 Authentication</h3>
+<pre><code>LoginPage → api.login() → POST /api/auth/login
+  → bcrypt.compare → JWT sign → { token, user }
+  → localStorage: codeviz_token
+  → Subsequent requests: Authorization: Bearer &lt;token&gt;</code></pre>
+
+<h3>3.2 Question CRUD</h3>
+<pre><code>MyQuestionsPage → POST /api/questions → Zod validation → SQLite insert
+DashboardPage   → GET /api/questions (owner-scoped)
+EditorPage      → GET /api/questions/:id → load starter/solution per language</code></pre>
+
+<h3>3.3 Visualization (core)</h3>
+<pre><code>EditorPage "Visualize code"
+  → POST /api/visualize
+  → auth + subscription middleware
+  → language runner → instrument → compile/run
+  → parse __CODEVIZ_JSON__ from stdout
+  → VisualizationPlayer renders steps + highlights line in Monaco</code></pre>
+
+<h3>3.4 Tracer pipeline</h3>
+<table>
+  <tr><th>Step</th><th>Action</th></tr>
+  <tr><td>1</td><td>User code received by <code>/api/visualize</code></td></tr>
+  <tr><td>2</td><td>Runner selects instrumenter (e.g. <code>instrumentJava</code>)</td></tr>
+  <tr><td>3</td><td>Instrumenter injects trace calls at statements</td></tr>
+  <tr><td>4</td><td>Runtime tracer records variables per step</td></tr>
+  <tr><td>5</td><td>Tracer emits <code>__CODEVIZ_JSON__{...}</code> on stdout</td></tr>
+  <tr><td>6</td><td>Runner parses JSON → returns <code>VisualizationStep[]</code></td></tr>
+</table>
+</section>
+
+<section id="db">
+<h2>4. Database Schema</h2>
+<p><strong>Engine:</strong> <code>node:sqlite</code> &nbsp;|&nbsp; <strong>Path:</strong> <code>{CODEVIZ_DATA_DIR}/codeviz.db</code> &nbsp;|&nbsp; <strong>Mode:</strong> WAL</p>
+
+<h3>users</h3>
+<table>
+  <tr><th>Column</th><th>Notes</th></tr>
+  <tr><td><code>id</code></td><td>Primary key</td></tr>
+  <tr><td><code>email</code></td><td>Unique</td></tr>
+  <tr><td><code>password_hash</code></td><td>bcrypt</td></tr>
+  <tr><td><code>role</code></td><td><code>user</code> or <code>admin</code></td></tr>
+  <tr><td><code>trial_ends_at</code>, <code>subscription_status</code></td><td>Billing fields</td></tr>
+  <tr><td><code>stripe_*</code></td><td>Stripe customer/subscription IDs</td></tr>
+</table>
+
+<h3>questions</h3>
+<p><code>id</code>, <code>title</code>, <code>description</code> (min 10 chars), <code>difficulty</code>, <code>created_by</code>, <code>created_at</code></p>
+
+<h3>question_starter_code / question_solution_code</h3>
+<p>Composite key <code>(question_id, language)</code> — stores code per language.</p>
+
+<h3>submissions</h3>
+<p>Audit log of every visualize run: <code>user_id</code>, <code>question_id</code>, <code>language</code>, <code>code</code>, <code>created_at</code>.</p>
+</section>
+
+<section id="api">
+<h2>5. API Reference</h2>
+<table>
+  <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+  <tr><td>GET</td><td><code>/api/health</code></td><td>Health check</td></tr>
+  <tr><td>POST</td><td><code>/api/auth/register</code></td><td>Create account + sample question</td></tr>
+  <tr><td>POST</td><td><code>/api/auth/login</code></td><td>Login, returns JWT</td></tr>
+  <tr><td>GET</td><td><code>/api/questions</code></td><td>List user's questions</td></tr>
+  <tr><td>GET</td><td><code>/api/questions/:id</code></td><td>Get question with all language code</td></tr>
+  <tr><td>POST</td><td><code>/api/questions</code></td><td>Create question</td></tr>
+  <tr><td>PUT</td><td><code>/api/questions/:id</code></td><td>Update question</td></tr>
+  <tr><td>DELETE</td><td><code>/api/questions/:id</code></td><td>Delete question</td></tr>
+  <tr><td>POST</td><td><code>/api/visualize</code></td><td>Run code, return trace steps</td></tr>
+  <tr><td>GET</td><td><code>/api/billing/status</code></td><td>User + billing state</td></tr>
+  <tr><td>POST</td><td><code>/api/billing/checkout</code></td><td>Stripe checkout URL</td></tr>
+  <tr><td>POST</td><td><code>/api/billing/portal</code></td><td>Stripe customer portal</td></tr>
+  <tr><td>POST</td><td><code>/api/billing/webhook</code></td><td>Stripe webhook events</td></tr>
+</table>
+</section>
+
+<section id="frontend">
+<h2>6. Frontend (LLD)</h2>
+
+<h3>6.1 Routes</h3>
+<table>
+  <tr><th>Path</th><th>Page</th><th>Access</th></tr>
+  <tr><td><code>/login</code></td><td>LoginPage</td><td>Public</td></tr>
+  <tr><td><code>/register</code></td><td>RegisterPage</td><td>Public</td></tr>
+  <tr><td><code>/dashboard</code></td><td>DashboardPage</td><td>Protected</td></tr>
+  <tr><td><code>/questions</code></td><td>MyQuestionsPage</td><td>Protected</td></tr>
+  <tr><td><code>/editor/:id</code></td><td>EditorPage</td><td>Protected</td></tr>
+  <tr><td><code>/billing</code></td><td>BillingPage</td><td>Protected</td></tr>
+</table>
+
+<h3>6.2 Key files</h3>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>desktop/src/main.tsx</code></td><td>React entry — BrowserRouter, AuthProvider</td></tr>
+  <tr><td><code>desktop/src/App.tsx</code></td><td>Route definitions</td></tr>
+  <tr><td><code>desktop/src/context/AuthContext.tsx</code></td><td>Auth state, JWT, billing access</td></tr>
+  <tr><td><code>desktop/src/lib/api.ts</code></td><td>HTTP client, JWT headers, error formatting</td></tr>
+  <tr><td><code>desktop/src/lib/visualization.ts</code></td><td>Parse arrays, matrices, trees from variables</td></tr>
+  <tr><td><code>desktop/src/pages/EditorPage.tsx</code></td><td>Editor + visualization split layout, line highlight</td></tr>
+  <tr><td><code>desktop/src/pages/MyQuestionsPage.tsx</code></td><td>Question CRUD with Monaco</td></tr>
+  <tr><td><code>desktop/src/pages/DashboardPage.tsx</code></td><td>Question library grid</td></tr>
+  <tr><td><code>desktop/src/pages/BillingPage.tsx</code></td><td>Trial / subscription UI</td></tr>
+  <tr><td><code>desktop/src/components/VisualizationPlayer.tsx</code></td><td>Step player, array/matrix/tree views</td></tr>
+  <tr><td><code>desktop/src/components/ProtectedLayout.tsx</code></td><td>Auth gate, sidebar, layout</td></tr>
+  <tr><td><code>desktop/src/components/Sidebar.tsx</code></td><td>Navigation and logout</td></tr>
+  <tr><td><code>desktop/shared/types.ts</code></td><td>Shared TypeScript interfaces</td></tr>
+</table>
+</section>
+
+<section id="backend">
+<h2>7. Backend (LLD)</h2>
+
+<h3>7.1 Server core</h3>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>desktop/server/index.ts</code></td><td>Express app, routes, static SPA</td></tr>
+  <tr><td><code>desktop/server/standalone.ts</code></td><td>Web entry (PORT, 0.0.0.0)</td></tr>
+  <tr><td><code>desktop/server/db.ts</code></td><td>SQLite schema, admin seed</td></tr>
+  <tr><td><code>desktop/server/auth.ts</code></td><td>JWT sign / verify</td></tr>
+  <tr><td><code>desktop/server/middleware.ts</code></td><td>authMiddleware, subscriptionMiddleware</td></tr>
+  <tr><td><code>desktop/server/env.ts</code></td><td>Load .env</td></tr>
+</table>
+
+<h3>7.2 Routes</h3>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>desktop/server/routes/auth.ts</code></td><td>Register / login, bcrypt</td></tr>
+  <tr><td><code>desktop/server/routes/questions.ts</code></td><td>CRUD, Zod validation</td></tr>
+  <tr><td><code>desktop/server/routes/visualize.ts</code></td><td>Language dispatch, submission log</td></tr>
+  <tr><td><code>desktop/server/routes/billing.ts</code></td><td>Stripe checkout, webhook</td></tr>
+</table>
+
+<h3>7.3 Services</h3>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>desktop/server/services/subscription.ts</code></td><td>Trial expiry, access checks</td></tr>
+  <tr><td><code>desktop/server/services/billing-config.ts</code></td><td>Billing feature flag</td></tr>
+  <tr><td><code>desktop/server/services/questions.ts</code></td><td>Question creation helpers</td></tr>
+  <tr><td><code>desktop/server/services/sampleQuestion.ts</code></td><td>Bubble Sort templates (7 langs)</td></tr>
+  <tr><td><code>desktop/server/services/tracer-paths.ts</code></td><td>Resolve tracer file paths</td></tr>
+</table>
+
+<h3>7.4 Runners</h3>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>desktop/server/runners/index.ts</code></td><td>Python, JavaScript runners</td></tr>
+  <tr><td><code>desktop/server/runners/java.ts</code></td><td>Java compile-run, prepareJavaSource</td></tr>
+  <tr><td><code>desktop/server/runners/native.ts</code></td><td>C / C++ via gcc / g++</td></tr>
+  <tr><td><code>desktop/server/runners/csharp.ts</code></td><td>C# compile and run</td></tr>
+  <tr><td><code>desktop/server/runners/go.ts</code></td><td>Go instrumented run</td></tr>
+</table>
+
+<h3>7.5 Tracers</h3>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>desktop/server/java-tracer/instrument.ts</code></td><td>Java instrumentation</td></tr>
+  <tr><td><code>desktop/server/java-tracer/Trace.java</code></td><td>Java runtime + TreeNode JSON</td></tr>
+  <tr><td><code>desktop/server/native-tracer/instrument.ts</code></td><td>C / C++ instrumentation</td></tr>
+  <tr><td><code>desktop/server/native-tracer/trace.c</code></td><td>C runtime tracer</td></tr>
+  <tr><td><code>desktop/server/csharp-tracer/instrument.ts</code></td><td>C# instrumentation</td></tr>
+  <tr><td><code>desktop/server/csharp-tracer/Trace.cs</code></td><td>C# runtime tracer</td></tr>
+  <tr><td><code>desktop/server/go-tracer/instrument.ts</code></td><td>Go instrumentation</td></tr>
+  <tr><td><code>desktop/server/go-tracer/trace.go</code></td><td>Go runtime tracer</td></tr>
+  <tr><td><code>desktop/server/instrument/scope.ts</code></td><td>Shared scope tracking</td></tr>
+</table>
+</section>
+
+<section id="deploy">
+<h2>8. Electron, Docker &amp; CI</h2>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>desktop/electron/main/index.ts</code></td><td>Electron main: API, window, paths</td></tr>
+  <tr><td><code>desktop/electron/preload/index.ts</code></td><td>Preload: <code>window.codeviz.apiBaseUrl</code></td></tr>
+  <tr><td><code>desktop/Dockerfile</code></td><td>Multi-stage Docker build</td></tr>
+  <tr><td><code>render.yaml</code></td><td>Render Blueprint</td></tr>
+  <tr><td><code>.github/workflows/release.yml</code></td><td>macOS .dmg CI on version tags</td></tr>
+</table>
+
+<h3>Environment variables</h3>
+<table>
+  <tr><th>Variable</th><th>Purpose</th></tr>
+  <tr><td><code>JWT_SECRET</code></td><td>JWT signing key</td></tr>
+  <tr><td><code>CODEVIZ_DATA_DIR</code></td><td>SQLite data directory</td></tr>
+  <tr><td><code>CODEVIZ_TRACER_ROOT</code></td><td>Tracer source path</td></tr>
+  <tr><td><code>BILLING_ENABLED</code></td><td>Enable Stripe (default: false)</td></tr>
+  <tr><td><code>STRIPE_*</code></td><td>Stripe API keys and webhook secret</td></tr>
+  <tr><td><code>PORT</code></td><td>Web server port (default: 10000)</td></tr>
+</table>
+</section>
+
+<section id="algoviz">
+<h2>9. AlgoViz iOS (Separate Product)</h2>
+<p>Standalone SwiftUI iOS 17+ app — no connection to CodeViz API.</p>
+<table>
+  <tr><th>Path</th><th>Purpose</th></tr>
+  <tr><td><code>AlgoViz/AlgoViz/AlgoVizApp.swift</code></td><td>App entry</td></tr>
+  <tr><td><code>AlgoViz/AlgoViz/Algorithms/</code></td><td>BubbleSort, BinarySearch simulators</td></tr>
+  <tr><td><code>AlgoViz/AlgoViz/Models/</code></td><td>Topic, VisualizationStep</td></tr>
+  <tr><td><code>AlgoViz/AlgoViz/ViewModels/</code></td><td>Home and playback state</td></tr>
+  <tr><td><code>AlgoViz/AlgoViz/Views/</code></td><td>UI views and components</td></tr>
+  <tr><td><code>AlgoViz/AlgoViz/Services/TopicCatalog.swift</code></td><td>Static lesson catalog</td></tr>
+</table>
+</section>
+
+<section id="stack">
+<h2>10. Technology Stack</h2>
+<table>
+  <tr><th>Layer</th><th>Technologies</th></tr>
+  <tr><td>Frontend</td><td>React 19, TypeScript, Vite, Tailwind, Monaco, React Router 7</td></tr>
+  <tr><td>Backend</td><td>Express 5, Node 22, SQLite, JWT, bcryptjs, Stripe, Zod</td></tr>
+  <tr><td>Desktop</td><td>Electron, electron-builder</td></tr>
+  <tr><td>Deploy</td><td>Docker, Render, GitHub Actions</td></tr>
+  <tr><td>Languages traced</td><td>Python, JavaScript, Java, C, C++, C#, Go</td></tr>
+</table>
+</section>
+
+<hr />
+<p style="color: var(--muted); font-size: 0.9rem;">End of document — CodeViz Architecture &amp; Design</p>
+
+</body>
+</html>
