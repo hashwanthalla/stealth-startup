@@ -92,6 +92,7 @@ export const api = {
     return request<{
       user: User;
       monthlyPriceUsd: number;
+      billingEnabled: boolean;
       stripeConfigured: boolean;
       hasAccess: boolean;
     }>("/billing/status");

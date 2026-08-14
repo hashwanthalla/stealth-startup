@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import type { VisualizationResult, VisualizationStep } from "../../shared/types";
 import { instrumentCSharp } from "../csharp-tracer/instrument";
+import { resolveTracerFile } from "../services/tracer-paths";
 
 const JSON_MARKER = "__CODEVIZ_JSON__";
 
@@ -79,14 +80,7 @@ function compileAndRunCSharp(tmp: string): CommandResult {
 }
 
 function resolve(file: string) {
-  const candidates = [
-    path.join(__dirname, "..", "csharp-tracer", file),
-    path.join(process.cwd(), "server", "csharp-tracer", file),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  throw new Error(`${file} not found`);
+  return resolveTracerFile("csharp-tracer", file);
 }
 
 function parse(stdout: string): VisualizationResult {

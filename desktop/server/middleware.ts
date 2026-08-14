@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { verifyToken } from "./auth";
 import { db } from "./db";
 import { loadUser, userHasAccess } from "./services/subscription";
+import { isBillingEnabled } from "./services/billing-config";
 import { MONTHLY_PRICE_USD } from "../shared/types";
 import type { User } from "../shared/types";
 
@@ -39,6 +40,11 @@ export function adminMiddleware(req: AuthedRequest, res: Response, next: NextFun
 }
 
 export function subscriptionMiddleware(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (!isBillingEnabled()) {
+    next();
+    return;
+  }
+
   const user = req.user;
   if (!user) {
     res.status(401).json({ error: "Authentication required" });

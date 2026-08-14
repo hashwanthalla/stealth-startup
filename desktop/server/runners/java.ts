@@ -4,19 +4,13 @@ import os from "os";
 import path from "path";
 import type { VisualizationResult, VisualizationStep } from "../../shared/types";
 import { instrumentJava } from "../java-tracer/instrument";
+import { resolveTracerFile } from "../services/tracer-paths";
 
 const RUN_TIMEOUT_MS = 12000;
 const JSON_MARKER = "__CODEVIZ_JSON__";
 
 function resolveTraceRuntime(): string {
-  const candidates = [
-    path.join(__dirname, "..", "java-tracer", "Trace.java"),
-    path.join(process.cwd(), "server", "java-tracer", "Trace.java"),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  throw new Error("Trace.java runtime not found");
+  return resolveTracerFile("java-tracer", "Trace.java");
 }
 
 function makeTempDir(): string {

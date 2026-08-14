@@ -67,20 +67,30 @@ npm run electron:dev
 
 Demo admin: `admin@codeviz.app` / `admin123`
 
-### Stripe setup ($2/month)
+### Stripe setup ($2/month) — optional
 
-1. Create a product in [Stripe Dashboard](https://dashboard.stripe.com) with a **$2/month** recurring price.
-2. Copy `.env.example` to `desktop/.env` and set:
-   - `STRIPE_SECRET_KEY` — your Stripe secret key
-   - `STRIPE_PRICE_ID` — the monthly price ID (e.g. `price_...`)
-   - `STRIPE_WEBHOOK_SECRET` — from Stripe CLI or dashboard webhook
-   - `APP_URL` — `http://localhost:5173` for local dev
+Payments are **disabled by default** so the app is free during early access (no Stripe required in India).
+
+To enable billing later (Stripe or after adding another provider):
+
+1. Set `BILLING_ENABLED=true` in `desktop/.env`
+2. Create a **$2/month** price in Stripe and set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`
 3. Forward webhooks locally:
    ```bash
    stripe listen --forward-to localhost:3847/api/billing/webhook
    ```
 
-After the 7-day trial, users are blocked from visualizing until they subscribe. Use **Billing → Dev: activate locally** without Stripe in development.
+### Build & distribute (macOS)
+
+```bash
+cd desktop
+npm install
+npm run electron:build
+```
+
+Installers are written to `desktop/release/`. GitHub Actions also builds on `v*` tags (see `.github/workflows/release.yml`).
+
+User data (accounts, questions) is stored in the OS user data folder when running the packaged app.
 
 ### Language runtimes
 

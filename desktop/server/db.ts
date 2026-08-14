@@ -6,7 +6,7 @@ import { randomUUID } from "crypto";
 import { SUPPORTED_LANGUAGES } from "../shared/types";
 import { createSampleQuestionForUser } from "./services/questions";
 
-const dataDir = path.join(process.cwd(), "data");
+const dataDir = process.env.CODEVIZ_DATA_DIR ?? path.join(process.cwd(), "data");
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }

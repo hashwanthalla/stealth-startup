@@ -61,6 +61,18 @@
       "server/csharp-tracer/**/*",
       "server/go-tracer/**/*"
     ],
+    "extraResources": [
+      { "from": "server/java-tracer", "to": "tracers/java-tracer" },
+      { "from": "server/native-tracer", "to": "tracers/native-tracer" },
+      { "from": "server/csharp-tracer", "to": "tracers/csharp-tracer" },
+      { "from": "server/go-tracer", "to": "tracers/go-tracer" }
+    ],
+    "asarUnpack": [
+      "server/java-tracer/**/*",
+      "server/native-tracer/**/*",
+      "server/csharp-tracer/**/*",
+      "server/go-tracer/**/*"
+    ],
     "mac": {
       "category": "public.app-category.education"
     }

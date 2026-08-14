@@ -5,6 +5,16 @@ import { startServer } from "../../server";
 const isDev = !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
 
+function initRuntimePaths() {
+  const userData = app.getPath("userData");
+  process.env.CODEVIZ_DATA_DIR = path.join(userData, "data");
+  process.env.CODEVIZ_ENV_FILE = path.join(userData, ".env");
+
+  if (app.isPackaged) {
+    process.env.CODEVIZ_TRACER_ROOT = path.join(process.resourcesPath, "tracers");
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -29,6 +39,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  initRuntimePaths();
   startServer(3847);
   createWindow();
 

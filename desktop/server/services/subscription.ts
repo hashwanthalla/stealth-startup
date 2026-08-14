@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { SubscriptionStatus, User } from "../../shared/types";
+import { isBillingEnabled } from "./billing-config";
 
 export function mapStripeSubscriptionStatus(status: string): SubscriptionStatus {
   switch (status) {
@@ -18,6 +19,7 @@ export function mapStripeSubscriptionStatus(status: string): SubscriptionStatus 
 }
 
 export function expireTrialIfNeeded(db: DatabaseSync, userId: string) {
+  if (!isBillingEnabled()) return;
   const row = db.prepare("SELECT subscription_status, trial_ends_at FROM users WHERE id = ?").get(userId) as
     | { subscription_status: string; trial_ends_at: string }
     | undefined;
@@ -42,6 +44,7 @@ export function mapUserRow(row: Record<string, unknown>): User {
 }
 
 export function userHasAccess(user: User): boolean {
+  if (!isBillingEnabled()) return true;
   if (user.role === "admin") return true;
   if (user.subscriptionStatus === "active") return true;
   if (user.subscriptionStatus === "trial" && new Date(user.trialEndsAt).getTime() > Date.now()) return true;

@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import type { VisualizationResult, VisualizationStep } from "../../shared/types";
 import { instrumentNative } from "../native-tracer/instrument";
+import { resolveTracerFile as resolveTracerAsset } from "../services/tracer-paths";
 
 const JSON_MARKER = "__CODEVIZ_JSON__";
 const RUN_TIMEOUT_MS = 12000;
@@ -17,14 +18,7 @@ function run(command: string, args: string[], cwd?: string) {
 }
 
 function resolveTracerFile(name: string) {
-  const candidates = [
-    path.join(__dirname, "..", "native-tracer", name),
-    path.join(process.cwd(), "server", "native-tracer", name),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  throw new Error(`${name} runtime not found`);
+  return resolveTracerAsset("native-tracer", name);
 }
 
 function parseResult(stdout: string, language: VisualizationResult["language"]): VisualizationResult {

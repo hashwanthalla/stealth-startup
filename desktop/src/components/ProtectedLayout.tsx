@@ -1,10 +1,9 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Sidebar } from "../components/Sidebar";
-import { userHasAccess } from "../lib/subscription";
 
 export function ProtectedLayout() {
-  const { user, loading } = useAuth();
+  const { user, loading, hasAccess, billingEnabled } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -20,7 +19,7 @@ export function ProtectedLayout() {
   }
 
   const onBillingPage = location.pathname === "/billing";
-  if (!userHasAccess(user) && !onBillingPage) {
+  if (billingEnabled && !hasAccess && !onBillingPage) {
     return <Navigate to="/billing" replace />;
   }
 

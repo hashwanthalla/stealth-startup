@@ -4,6 +4,7 @@ import { db } from "../db";
 import { authMiddleware, type AuthedRequest } from "../middleware";
 import { MONTHLY_PRICE_USD } from "../../shared/types";
 import { loadUser, mapStripeSubscriptionStatus, userHasAccess } from "../services/subscription";
+import { isBillingEnabled } from "../services/billing-config";
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
@@ -97,6 +98,7 @@ billingRoutes.get("/status", (req: AuthedRequest, res) => {
   res.json({
     user,
     monthlyPriceUsd: MONTHLY_PRICE_USD,
+    billingEnabled: isBillingEnabled(),
     stripeConfigured: Boolean(stripe && process.env.STRIPE_PRICE_ID),
     hasAccess: userHasAccess(user),
   });

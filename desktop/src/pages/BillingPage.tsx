@@ -6,7 +6,7 @@ import { isTrialExpired } from "../lib/subscription";
 import { daysRemaining, formatDate } from "../lib/utils";
 
 export function BillingPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, billingEnabled } = useAuth();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [stripeConfigured, setStripeConfigured] = useState(false);
@@ -56,10 +56,40 @@ export function BillingPage() {
 
   const trialExpired = user ? isTrialExpired(user) || user.subscriptionStatus === "expired" : false;
   const needsSubscription =
+    billingEnabled &&
     user &&
     user.role !== "admin" &&
     user.subscriptionStatus !== "active" &&
     (trialExpired || user.subscriptionStatus === "past_due" || user.subscriptionStatus === "cancelled");
+
+  if (!billingEnabled) {
+    return (
+      <div className="p-8">
+        <h1 className="text-3xl font-bold text-white">Billing</h1>
+        <p className="mt-2 text-slate-400">CodeViz is free to use during early access.</p>
+
+        <div className="mt-8 max-w-2xl rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6">
+          <p className="text-lg font-semibold text-white">Free early access</p>
+          <p className="mt-2 text-sm text-slate-300">
+            Payments are not required right now. Create questions, write code, and visualize across all supported
+            languages at no cost.
+          </p>
+          <p className="mt-4 text-sm text-slate-400">
+            Paid plans (${MONTHLY_PRICE_USD}/month after a {TRIAL_DAYS}-day trial) will arrive when we add a payment
+            provider that works in India (e.g. Razorpay).
+          </p>
+        </div>
+
+        {user && (
+          <div className="mt-6 max-w-2xl rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+            <p className="text-sm text-slate-400">Account</p>
+            <p className="mt-1 font-medium text-white">{user.email}</p>
+            <p className="mt-1 text-sm capitalize text-slate-400">Status: {user.subscriptionStatus}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
