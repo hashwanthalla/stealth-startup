@@ -1,0 +1,68 @@
+{
+  "name": "codeviz-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop app for visualizing DSA code across multiple languages",
+  "main": "dist-electron/electron/main/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.node.json && vite build && tsc -p tsconfig.electron.json",
+    "preview": "vite preview",
+    "postinstall": "node scripts/ensure-electron.js",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron .\"",
+    "electron:build": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "bcryptjs": "^3.0.2",
+    "clsx": "^2.1.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.511.0",
+    "monaco-editor": "^0.52.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
+    "stripe": "^18.2.1",
+    "tailwind-merge": "^3.3.0",
+    "zod": "^3.25.42"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.15.29",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.stealthstartup.codeviz",
+    "productName": "CodeViz",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "server/java-tracer/**/*",
+      "server/native-tracer/**/*",
+      "server/csharp-tracer/**/*",
+      "server/go-tracer/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.education"
+    }
+  }
+}
