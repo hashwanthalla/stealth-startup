@@ -1,14 +1,65 @@
 import {
   diffVariableNames,
   findBestArrayVariable,
+  findBestMatrixVariable,
   inferHighlightIndices,
   parseArrayValue,
   parseGraphValue,
+  parseMatrixValue,
 } from "@/lib/visualization";
 import { cn } from "@/lib/utils";
 import type { VisualizationStep, VisualizationVariable } from "@shared/types";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
+
+function MatrixGrid({
+  values,
+  label,
+  activeRow,
+  activeCol,
+}: {
+  values: number[][];
+  label: string;
+  activeRow?: number;
+  activeCol?: number;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+      <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+      <div className="viz-scrollbar overflow-x-auto">
+        <div
+          className="inline-grid gap-1.5"
+          style={{ gridTemplateColumns: `repeat(${values[0]?.length ?? 1}, minmax(2.5rem, 1fr))` }}
+        >
+          {values.map((row, rowIndex) =>
+            row.map((value, colIndex) => {
+              const active =
+                activeRow === rowIndex &&
+                activeCol === colIndex &&
+                activeRow !== undefined &&
+                activeCol !== undefined;
+              return (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  className={cn(
+                    "flex min-w-10 items-center justify-center rounded-lg border px-2 py-2 font-mono text-sm tabular-nums",
+                    active
+                      ? "border-amber-400/60 bg-amber-500/15 text-amber-100"
+                      : value === 0
+                        ? "border-slate-800 bg-slate-900/80 text-slate-600"
+                        : "border-slate-700 bg-slate-900 text-slate-200"
+                  )}
+                >
+                  {value}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ArrayBars({
   values,
@@ -111,11 +162,23 @@ export function VisualizationPlayer({
   );
   const arrayVariable = step ? findBestArrayVariable(step.variables) : null;
   const arrayValues = arrayVariable ? parseArrayValue(arrayVariable.value) : null;
+  const matrixVariable = step ? findBestMatrixVariable(step.variables) : null;
+  const matrixValues = matrixVariable ? parseMatrixValue(matrixVariable.value) : null;
   const highlightIndices = useMemo(() => {
     if (!step) return [];
     const fromStep = step.highlights ?? [];
     const inferred = inferHighlightIndices(step.variables);
     return [...new Set([...fromStep, ...inferred])];
+  }, [step]);
+  const matrixPosition = useMemo(() => {
+    if (!step) return { row: undefined, col: undefined };
+    const byName = new Map(step.variables.map((variable) => [variable.name, variable.value]));
+    const row = Number(byName.get("x") ?? byName.get("row"));
+    const col = Number(byName.get("y") ?? byName.get("col"));
+    return {
+      row: Number.isFinite(row) ? row : undefined,
+      col: Number.isFinite(col) ? col : undefined,
+    };
   }, [step]);
 
   if (!step) {
@@ -195,6 +258,15 @@ export function VisualizationPlayer({
           className="viz-range mt-4 w-full"
         />
       </div>
+
+      {matrixValues && matrixValues.length > 0 ? (
+        <MatrixGrid
+          values={matrixValues}
+          label={matrixVariable!.name}
+          activeRow={matrixPosition.row}
+          activeCol={matrixPosition.col}
+        />
+      ) : null}
 
       {arrayValues && arrayValues.length > 0 ? (
         <ArrayBars values={arrayValues} label={arrayVariable!.name} highlights={highlightIndices} />

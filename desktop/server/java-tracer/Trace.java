@@ -93,9 +93,12 @@ public class Trace {
     private static String serialize(Object value) {
         if (value == null) return "null";
         if (value instanceof int[]) return Arrays.toString((int[]) value);
+        if (value instanceof int[][]) return Arrays.deepToString((int[][]) value);
         if (value instanceof long[]) return Arrays.toString((long[]) value);
+        if (value instanceof long[][]) return Arrays.deepToString((long[][]) value);
         if (value instanceof double[]) return Arrays.toString((double[]) value);
         if (value instanceof boolean[]) return Arrays.toString((boolean[]) value);
+        if (value instanceof boolean[][]) return Arrays.deepToString((boolean[][]) value);
         if (value instanceof char[]) return new String((char[]) value);
         if (value instanceof Object[]) return Arrays.deepToString((Object[]) value);
         if (value instanceof Collection<?>) return value.toString();

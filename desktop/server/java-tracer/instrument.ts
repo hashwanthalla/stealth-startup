@@ -5,6 +5,32 @@ const FIELD_PATTERN =
   /^\s*(?:private|public|protected)\s+(?:static\s+)?(?:final\s+)?[\w<>,\[\]\s]+\s+([A-Za-z_][\w]*)\s*(?:=|;)/;
 const SKIP_LINE =
   /^\s*(?:package|import|\/\/|\/\*|\*|@|codeviz\.Trace\.|}\s*catch|}\s*finally)/;
+const JAVA_TYPE_KEYWORDS = new Set([
+  "boolean",
+  "byte",
+  "char",
+  "double",
+  "float",
+  "int",
+  "long",
+  "short",
+  "void",
+  "var",
+  "class",
+  "interface",
+  "enum",
+  "new",
+  "return",
+  "catch",
+  "final",
+]);
+
+function endsWithCompletedStatement(trimmed: string) {
+  const line = trimmed.replace(/\/\/.*$/, "").trim();
+  if (!line) return false;
+  if (/^\{.*\},?$/.test(line)) return false;
+  return line.endsWith(";");
+}
 
 function indentOf(line: string) {
   return line.match(/^\s*/)?.[0] ?? "";
@@ -46,7 +72,7 @@ function extractDeclarations(line: string): string[] {
   );
   for (const match of declMatches) {
     const name = match[1];
-    if (!["class", "interface", "enum", "return", "new", "catch"].includes(name)) {
+    if (!JAVA_TYPE_KEYWORDS.has(name)) {
       declared.push(name);
     }
   }
@@ -182,7 +208,7 @@ export function instrumentJava(source: string): { code: string; className: strin
           for (const name of declared) blockScopes[blockScopes.length - 1].add(name);
         }
         output.push(prefix.trimEnd());
-        if (isExecutableLine(trimmed) && !SKIP_LINE.test(trimmed)) {
+        if (isExecutableLine(trimmed) && !SKIP_LINE.test(trimmed) && endsWithCompletedStatement(trimmed)) {
           output.push(
             buildTraceCall(
               `${indent}  `,
@@ -213,7 +239,8 @@ export function instrumentJava(source: string): { code: string; className: strin
     const shouldTrace =
       methodDepth !== null &&
       isExecutableLine(trimmed) &&
-      !SKIP_LINE.test(trimmed);
+      !SKIP_LINE.test(trimmed) &&
+      endsWithCompletedStatement(trimmed);
 
     const traceVars = shouldTrace
       ? activeVariables(methodParams, blockScopes, fields, isStaticMethod)

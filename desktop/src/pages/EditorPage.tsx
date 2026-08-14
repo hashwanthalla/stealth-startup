@@ -256,8 +256,22 @@ export function EditorPage() {
               </div>
             )}
           </div>
-          {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-          {result?.error && <p className="mt-3 text-sm text-red-300">{result.error}</p>}
+          {error && (
+            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-red-300">Error</p>
+              <pre className="viz-scrollbar mt-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono text-xs text-red-200">
+                {error}
+              </pre>
+            </div>
+          )}
+          {result?.error && (
+            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-red-300">Execution error</p>
+              <pre className="viz-scrollbar mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-xs text-red-200">
+                {result.error}
+              </pre>
+            </div>
+          )}
         </div>
 
         <div className="viz-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 xl:p-5">
