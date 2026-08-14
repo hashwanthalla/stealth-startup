@@ -92,6 +92,41 @@ Installers are written to `desktop/release/`. GitHub Actions also builds on `v*`
 
 User data (accounts, questions) is stored in the OS user data folder when running the packaged app.
 
+### Web beta deploy (Render)
+
+CodeViz can run as a **single web app** (React UI + API + compilers in one container).
+
+**Local web mode:**
+
+```bash
+cd desktop
+npm install
+npm run build:web
+PORT=8080 npm run start:web
+# open http://localhost:8080
+```
+
+**Deploy to [Render](https://render.com)** (recommended for beta):
+
+1. Push this repo to GitHub
+2. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**
+3. Connect `stealth-startup` — Render reads `render.yaml` at repo root
+4. Deploy — you get a URL like `https://codeviz-beta.onrender.com`
+5. Add a **persistent disk** is configured in `render.yaml` at `/data` for SQLite
+
+**Docker (any host):**
+
+```bash
+cd desktop
+docker build -t codeviz-web .
+docker run -p 8080:8080 -v codeviz-data:/data codeviz-web
+```
+
+**Beta notes:**
+- Billing is off (`BILLING_ENABLED=false`) — free for all users
+- Visualization needs compilers in the container (Python, Java, C/C++, Go, C# included in Docker image)
+- First deploy may take ~10–15 minutes (large image with JDK + .NET)
+
 ### Language runtimes
 
 Install locally as needed: `python3`, JDK, `gcc`/`g++`, `csc` (.NET), `go`

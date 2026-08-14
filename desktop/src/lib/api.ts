@@ -9,7 +9,7 @@ import type {
 const API_BASE =
   window.codeviz?.apiBaseUrl ??
   import.meta.env.VITE_API_BASE_URL ??
-  "http://localhost:3847/api";
+  (import.meta.env.PROD ? "/api" : "http://localhost:3847/api");
 
 function getToken() {
   return localStorage.getItem("codeviz_token");
