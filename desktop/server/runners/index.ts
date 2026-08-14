@@ -59,6 +59,7 @@ import json, sys, traceback
 
 steps = []
 output_lines = []
+_real_stdout = sys.__stdout__
 
 def serialize(value):
     if isinstance(value, (int, float, str, bool)) or value is None:
@@ -68,6 +69,8 @@ def serialize(value):
     return str(value)
 
 def trace(frame, event, arg):
+    if frame.f_code.co_filename != "user_code.py":
+        return None
     if event == "line":
         lineno = frame.f_lineno
         locals_ = {k: serialize(v) for k, v in frame.f_locals.items() if not k.startswith("__")}
@@ -90,6 +93,10 @@ class Writer:
 sys.stdout = Writer()
 sys.settrace(trace)
 
+def emit(payload):
+    sys.stdout = _real_stdout
+    print(json.dumps(payload))
+
 try:
     with open("${userFile.replace(/\\/g, "/")}", "r") as f:
         source = f.read()
@@ -97,20 +104,20 @@ try:
     exec(compiled, {"__name__": "__main__"})
     if steps:
         steps[-1]["output"] = "\\n".join(output_lines)
-    print(json.dumps({
+    emit({
         "success": True,
         "steps": steps,
         "finalOutput": "\\n".join(output_lines),
         "visualizationLevel": "full"
-    }))
+    })
 except Exception as e:
-    print(json.dumps({
+    emit({
         "success": False,
         "steps": steps,
         "finalOutput": "\\n".join(output_lines),
         "error": traceback.format_exc(),
         "visualizationLevel": "full"
-    }))
+    })
 `;
 
   fs.writeFileSync(userFile, code);
@@ -118,7 +125,18 @@ except Exception as e:
 
   try {
     const result = runCommand("python3", [tracerFile]);
-    const parsed = JSON.parse(result.stdout.trim().split("\n").pop() ?? "{}");
+    const stdout = result.stdout.trim();
+    if (!stdout) {
+      return {
+        language: "python",
+        success: false,
+        steps: [],
+        finalOutput: "",
+        error: result.stderr.trim() || "Python tracer produced no output. Is python3 installed?",
+        visualizationLevel: "execution",
+      };
+    }
+    const parsed = JSON.parse(stdout.split("\n").pop() ?? "{}");
     return {
       language: "python",
       success: parsed.success,
