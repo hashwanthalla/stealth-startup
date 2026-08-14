@@ -3,7 +3,8 @@ import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
-import { SUPPORTED_LANGUAGES, type Language } from "../shared/types";
+import { SUPPORTED_LANGUAGES } from "../shared/types";
+import { createSampleQuestionForUser } from "./services/questions";
 
 const dataDir = path.join(process.cwd(), "data");
 if (!fs.existsSync(dataDir)) {
@@ -45,6 +46,14 @@ db.exec(`
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS question_solution_code (
+    question_id TEXT NOT NULL,
+    language TEXT NOT NULL,
+    solution_code TEXT NOT NULL,
+    PRIMARY KEY (question_id, language),
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS submissions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -76,164 +85,31 @@ function seedAdminIfNeeded() {
     now.toISOString()
   );
 
-  const questionId = randomUUID();
-  db.prepare(
-    `INSERT INTO questions (id, title, description, difficulty, created_by, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(
-    questionId,
-    "Bubble Sort",
-    "Implement bubble sort and visualize how elements swap until the array is sorted.",
-    "beginner",
-    id,
-    now.toISOString()
-  );
-
-  const starters: Record<Language, string> = {
-    python: `def bubble_sort(arr):
-    n = len(arr)
-    for i in range(n):
-        for j in range(0, n - i - 1):
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr
-
-data = [64, 34, 25, 12, 22, 11, 90]
-result = bubble_sort(data)
-print(result)`,
-    javascript: `function bubbleSort(arr) {
-  const n = arr.length;
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n - i - 1; j++) {
-      if (arr[j] > arr[j + 1]) {
-        const temp = arr[j];
-        arr[j] = arr[j + 1];
-        arr[j + 1] = temp;
-      }
-    }
-  }
-  return arr;
-}
-
-const data = [64, 34, 25, 12, 22, 11, 90];
-const result = bubbleSort(data);
-console.log(result);`,
-    java: `import java.util.Arrays;
-
-public class Main {
-    static void bubbleSort(int[] arr) {
-        int n = arr.length;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n - i - 1; j++) {
-                if (arr[j] > arr[j + 1]) {
-                    int temp = arr[j];
-                    arr[j] = arr[j + 1];
-                    arr[j + 1] = temp;
-                }
-            }
-        }
-    }
-
-    public static void main(String[] args) {
-        int[] data = {64, 34, 25, 12, 22, 11, 90};
-        bubbleSort(data);
-        System.out.println(Arrays.toString(data));
-    }
-}`,
-    cpp: `#include <iostream>
-#include <vector>
-using namespace std;
-
-void bubbleSort(vector<int>& arr) {
-    int n = arr.size();
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n - i - 1; j++) {
-            if (arr[j] > arr[j + 1]) {
-                int temp = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
-            }
-        }
-    }
-}
-
-int main() {
-    vector<int> data = {64, 34, 25, 12, 22, 11, 90};
-    bubbleSort(data);
-    for (int v : data) cout << v << " ";
-    return 0;
-}`,
-    c: `#include <stdio.h>
-
-void bubble_sort(int arr[], int n) {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n - i - 1; j++) {
-            if (arr[j] > arr[j + 1]) {
-                int temp = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
-            }
-        }
-    }
-}
-
-int main() {
-    int data[] = {64, 34, 25, 12, 22, 11, 90};
-    int n = 10;
-    bubble_sort(data, n);
-    for (int i = 0; i < n; i++) printf("%d ", data[i]);
-    return 0;
-}`,
-    csharp: `using System;
-
-class Program {
-    static void BubbleSort(int[] arr) {
-        int n = arr.Length;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n - i - 1; j++) {
-                if (arr[j] > arr[j + 1]) {
-                    int temp = arr[j];
-                    arr[j] = arr[j + 1];
-                    arr[j + 1] = temp;
-                }
-            }
-        }
-    }
-
-    static void Main() {
-        int[] data = {64, 34, 25, 12, 22, 11, 90};
-        BubbleSort(data);
-        Console.WriteLine(string.Join(", ", data));
-    }
-}`,
-    go: `package main
-
-import "fmt"
-
-func bubbleSort(arr []int) {
-    n := len(arr)
-    for i := 0; i < n; i++ {
-        for j := 0; j < n-i-1; j++ {
-            if arr[j] > arr[j+1] {
-                arr[j], arr[j+1] = arr[j+1], arr[j]
-            }
-        }
-    }
-}
-
-func main() {
-    data := []int{64, 34, 25, 12, 22, 11, 90}
-    bubbleSort(data)
-    fmt.Println(data)
-}`,
-  };
-
-  const insertStarter = db.prepare(
-    `INSERT INTO question_starter_code (question_id, language, starter_code) VALUES (?, ?, ?)`
-  );
-  for (const lang of SUPPORTED_LANGUAGES) {
-    insertStarter.run(questionId, lang, starters[lang]);
-  }
+  const questionId = createSampleQuestionForUser(db, id);
+  void questionId;
 }
 
 seedAdminIfNeeded();
+
+function migrateSolutionCodes() {
+  const questions = db.prepare("SELECT id FROM questions").all() as Array<{ id: string }>;
+  const hasSolution = db.prepare(
+    "SELECT 1 FROM question_solution_code WHERE question_id = ? LIMIT 1"
+  );
+  const starters = db.prepare(
+    "SELECT language, starter_code FROM question_starter_code WHERE question_id = ?"
+  );
+  const insertSolution = db.prepare(
+    `INSERT OR IGNORE INTO question_solution_code (question_id, language, solution_code) VALUES (?, ?, ?)`
+  );
+
+  for (const question of questions) {
+    if (hasSolution.get(question.id)) continue;
+    const rows = starters.all(question.id) as Array<{ language: string; starter_code: string }>;
+    for (const row of rows) {
+      insertSolution.run(question.id, row.language, row.starter_code);
+    }
+  }
+}
+
+migrateSolutionCodes();

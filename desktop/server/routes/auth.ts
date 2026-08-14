@@ -6,6 +6,7 @@ import { db } from "../db";
 import { signToken } from "../auth";
 import { TRIAL_DAYS } from "../../shared/types";
 import type { User } from "../../shared/types";
+import { createSampleQuestionForUser } from "../services/questions";
 
 function mapUser(row: Record<string, unknown>): User {
   return {
@@ -57,6 +58,8 @@ authRoutes.post("/register", (req, res) => {
     trialEnds.toISOString(),
     now.toISOString()
   );
+
+  createSampleQuestionForUser(db, id);
 
   const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as Record<string, unknown>;
   const user = mapUser(row);

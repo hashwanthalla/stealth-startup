@@ -37,6 +37,16 @@ visualizeRoutes.post("/", (req: AuthedRequest, res) => {
 
   const { language, code, questionId } = parsed.data;
 
+  if (questionId) {
+    const owned = db
+      .prepare("SELECT id FROM questions WHERE id = ? AND created_by = ?")
+      .get(questionId, req.user!.id);
+    if (!owned) {
+      res.status(403).json({ error: "You can only visualize your own questions" });
+      return;
+    }
+  }
+
   let result;
   switch (language) {
     case "python":

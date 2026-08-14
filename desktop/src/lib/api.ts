@@ -57,11 +57,30 @@ export const api = {
     description: string;
     difficulty: Question["difficulty"];
     starterCode: Record<Language, string>;
+    solutionCode: Record<Language, string>;
   }) {
     return request<Question>("/questions", {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+  updateQuestion(
+    id: string,
+    payload: {
+      title: string;
+      description: string;
+      difficulty: Question["difficulty"];
+      starterCode: Record<Language, string>;
+      solutionCode: Record<Language, string>;
+    }
+  ) {
+    return request<Question>(`/questions/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteQuestion(id: string) {
+    return request<{ ok: boolean }>(`/questions/${id}`, { method: "DELETE" });
   },
   visualize(payload: { language: Language; code: string; questionId?: string }) {
     return request<VisualizationResult>("/visualize", {

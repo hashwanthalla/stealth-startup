@@ -36,6 +36,7 @@ export interface Question {
   createdBy: string;
   createdAt: string;
   starterCode: Record<Language, string>;
+  solutionCode: Record<Language, string>;
 }
 
 export interface VisualizationVariable {

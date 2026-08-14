@@ -1,10 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { Code2, CreditCard, LayoutDashboard, Shield, LogOut } from "lucide-react";
+import { BookOpen, Code2, CreditCard, LayoutDashboard, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { cn, daysRemaining } from "../lib/utils";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/questions", label: "My Questions", icon: BookOpen },
   { to: "/billing", label: "Billing", icon: CreditCard },
 ];
 
@@ -39,26 +40,12 @@ export function Sidebar() {
             {link.label}
           </NavLink>
         ))}
-        {user?.role === "admin" && (
-          <NavLink
-            to="/admin"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
-                isActive ? "bg-brand-600 text-white" : "text-slate-300 hover:bg-slate-800"
-              )
-            }
-          >
-            <Shield className="h-4 w-4" />
-            Admin
-          </NavLink>
-        )}
       </nav>
 
       <div className="mt-auto space-y-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
           <p className="text-sm font-medium">{user?.email}</p>
-          <p className="mt-1 text-xs text-slate-400 capitalize">
+          <p className="mt-1 text-xs capitalize text-slate-400">
             {user?.role} · {user?.subscriptionStatus}
           </p>
           {user?.subscriptionStatus === "trial" && (
