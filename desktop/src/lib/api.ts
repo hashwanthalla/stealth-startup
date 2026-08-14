@@ -15,6 +15,20 @@ function getToken() {
   return localStorage.getItem("codeviz_token");
 }
 
+function formatApiError(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (Array.isArray(error)) return error.map(String).join(", ");
+  if (error && typeof error === "object") {
+    const messages = Object.entries(error as Record<string, unknown>).flatMap(([field, value]) => {
+      if (Array.isArray(value)) return value.map((msg) => `${field}: ${String(msg)}`);
+      if (typeof value === "string") return [`${field}: ${value}`];
+      return [];
+    });
+    if (messages.length > 0) return messages.join("; ");
+  }
+  return "Request failed";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
@@ -28,7 +42,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error ?? data.message ?? "Request failed");
+    throw new Error(formatApiError(data.error ?? data.message ?? "Request failed"));
   }
   return data as T;
 }

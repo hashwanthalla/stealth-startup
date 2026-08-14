@@ -46,12 +46,21 @@ function isOwner(questionId: string, userId: string) {
 }
 
 const questionBodySchema = z.object({
-  title: z.string().min(3),
-  description: z.string().min(10),
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
   difficulty: z.enum(["beginner", "intermediate", "advanced"]),
   starterCode: z.record(z.enum(SUPPORTED_LANGUAGES), z.string()),
   solutionCode: z.record(z.enum(SUPPORTED_LANGUAGES), z.string()),
 });
+
+function validationErrorMessage(error: z.ZodError) {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.join(".");
+      return path ? `${path}: ${issue.message}` : issue.message;
+    })
+    .join("; ");
+}
 
 function normalizeCodeRecord(code: Partial<Record<Language, string>>): Record<Language, string> {
   const normalized = {} as Record<Language, string>;
@@ -108,7 +117,7 @@ questionRoutes.get("/:id", (req: AuthedRequest, res) => {
 questionRoutes.post("/", (req: AuthedRequest, res) => {
   const parsed = questionBodySchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    res.status(400).json({ error: validationErrorMessage(parsed.error) });
     return;
   }
 
@@ -129,7 +138,7 @@ questionRoutes.put("/:id", (req: AuthedRequest, res) => {
 
   const parsed = questionBodySchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    res.status(400).json({ error: validationErrorMessage(parsed.error) });
     return;
   }
 

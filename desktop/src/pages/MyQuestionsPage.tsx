@@ -133,9 +133,11 @@ export function MyQuestionsPage() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Describe the problem, input/output format, and what learners should implement"
           rows={4}
+          minLength={10}
           className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3"
           required
         />
+        <p className="text-xs text-slate-500">Description must be at least 10 characters.</p>
 
         <div className="flex flex-wrap gap-2">
           <button
