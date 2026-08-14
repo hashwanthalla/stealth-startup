@@ -6,15 +6,11 @@ services:
     dockerContext: ./desktop
     plan: starter
     healthCheckPath: /api/health
-    disk:
-      name: codeviz-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: CODEVIZ_DATA_DIR
-        value: /data
+        value: /app/data
       - key: CODEVIZ_TRACER_ROOT
         value: /app/server
       - key: BILLING_ENABLED

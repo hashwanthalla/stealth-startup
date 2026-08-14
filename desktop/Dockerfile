@@ -1,6 +1,8 @@
 FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
+ENV NODE_OPTIONS=--max-old-space-size=512
+
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY . .
@@ -8,19 +10,15 @@ RUN npm run build:web
 
 FROM node:22-bookworm-slim
 
+# Compilers for visualization (C# omitted on web beta to keep image small)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     gcc \
     g++ \
-    openjdk-21-jdk-headless \
+    default-jdk-headless \
     golang-go \
-    wget \
     ca-certificates \
-  && wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
-  && dpkg -i packages-microsoft-prod.deb \
-  && apt-get update \
-  && apt-get install -y --no-install-recommends dotnet-sdk-8.0 \
-  && rm -rf /var/lib/apt/lists/* packages-microsoft-prod.deb
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -35,15 +33,11 @@ COPY server/csharp-tracer ./server/csharp-tracer
 COPY server/go-tracer ./server/go-tracer
 
 ENV NODE_ENV=production
-ENV PORT=8080
-ENV CODEVIZ_DATA_DIR=/data
+ENV PORT=10000
+ENV CODEVIZ_DATA_DIR=/app/data
 ENV CODEVIZ_TRACER_ROOT=/app/server
 ENV BILLING_ENABLED=false
 
-VOLUME ["/data"]
-EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
-  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 8080) + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+EXPOSE 10000
 
 CMD ["node", "dist-electron/server/standalone.js"]

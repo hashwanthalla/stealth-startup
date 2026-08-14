@@ -1,7 +1,7 @@
 import path from "path";
 import { startServer } from "./index";
 
-const port = Number(process.env.PORT ?? 8080);
+const port = Number(process.env.PORT ?? 10000);
 
 if (!process.env.CODEVIZ_DATA_DIR) {
   process.env.CODEVIZ_DATA_DIR = path.join(process.cwd(), "data");
