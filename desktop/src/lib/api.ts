@@ -9,7 +9,7 @@ import type {
 const API_BASE =
   window.codeviz?.apiBaseUrl ??
   import.meta.env.VITE_API_BASE_URL ??
-  "http://localhost:3847/api";
+  (import.meta.env.PROD ? "/api" : "http://localhost:3847/api");
 
 function getToken() {
   return localStorage.getItem("codeviz_token");
@@ -91,12 +91,17 @@ export const api = {
   billingStatus() {
     return request<{
       user: User;
-      weeklyPriceUsd: number;
+      monthlyPriceUsd: number;
+      billingEnabled: boolean;
       stripeConfigured: boolean;
+      hasAccess: boolean;
     }>("/billing/status");
   },
   createCheckout() {
     return request<{ url: string }>("/billing/checkout", { method: "POST" });
+  },
+  createBillingPortal() {
+    return request<{ url: string }>("/billing/portal", { method: "POST" });
   },
   devActivate() {
     return request<{ ok: boolean }>("/billing/dev-activate", { method: "POST" });

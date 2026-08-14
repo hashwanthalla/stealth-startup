@@ -7,17 +7,7 @@ import { signToken } from "../auth";
 import { TRIAL_DAYS } from "../../shared/types";
 import type { User } from "../../shared/types";
 import { createSampleQuestionForUser } from "../services/questions";
-
-function mapUser(row: Record<string, unknown>): User {
-  return {
-    id: row.id as string,
-    email: row.email as string,
-    role: row.role as User["role"],
-    trialEndsAt: row.trial_ends_at as string,
-    subscriptionStatus: row.subscription_status as User["subscriptionStatus"],
-    createdAt: row.created_at as string,
-  };
-}
+import { loadUser, mapUserRow } from "../services/subscription";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -62,7 +52,7 @@ authRoutes.post("/register", (req, res) => {
   createSampleQuestionForUser(db, id);
 
   const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as Record<string, unknown>;
-  const user = mapUser(row);
+  const user = mapUserRow(row);
   res.json({ token: signToken(user), user });
 });
 
@@ -82,6 +72,10 @@ authRoutes.post("/login", (req, res) => {
     return;
   }
 
-  const user = mapUser(row);
+  const user = loadUser(db, row.id as string);
+  if (!user) {
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
+  }
   res.json({ token: signToken(user), user });
 });

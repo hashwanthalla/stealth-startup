@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: codeviz-beta
+    runtime: docker
+    dockerfilePath: ./desktop/Dockerfile
+    dockerContext: ./desktop
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CODEVIZ_DATA_DIR
+        value: /app/data
+      - key: CODEVIZ_TRACER_ROOT
+        value: /app/server
+      - key: BILLING_ENABLED
+        value: false
+      - key: JWT_SECRET
+        generateValue: true

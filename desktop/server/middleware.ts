@@ -1,21 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyToken } from "./auth";
 import { db } from "./db";
+import { loadUser, userHasAccess } from "./services/subscription";
+import { isBillingEnabled } from "./services/billing-config";
+import { MONTHLY_PRICE_USD } from "../shared/types";
 import type { User } from "../shared/types";
 
 export interface AuthedRequest extends Request {
   user?: User;
-}
-
-function mapUser(row: Record<string, unknown>): User {
-  return {
-    id: row.id as string,
-    email: row.email as string,
-    role: row.role as User["role"],
-    trialEndsAt: row.trial_ends_at as string,
-    subscriptionStatus: row.subscription_status as User["subscriptionStatus"],
-    createdAt: row.created_at as string,
-  };
 }
 
 export function authMiddleware(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -27,14 +19,12 @@ export function authMiddleware(req: AuthedRequest, res: Response, next: NextFunc
 
   try {
     const payload = verifyToken(header.slice(7));
-    const row = db.prepare("SELECT * FROM users WHERE id = ?").get(payload.sub) as
-      | Record<string, unknown>
-      | undefined;
-    if (!row) {
+    const user = loadUser(db, payload.sub);
+    if (!user) {
       res.status(401).json({ error: "User not found" });
       return;
     }
-    req.user = mapUser(row);
+    req.user = user;
     next();
   } catch {
     res.status(401).json({ error: "Invalid token" });
@@ -50,29 +40,28 @@ export function adminMiddleware(req: AuthedRequest, res: Response, next: NextFun
 }
 
 export function subscriptionMiddleware(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (!isBillingEnabled()) {
+    next();
+    return;
+  }
+
   const user = req.user;
   if (!user) {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
 
-  if (user.role === "admin") {
-    next();
-    return;
-  }
+  const currentUser = loadUser(db, user.id) ?? user;
+  req.user = currentUser;
 
-  const now = Date.now();
-  const trialEnd = new Date(user.trialEndsAt).getTime();
-  const hasActiveSub = user.subscriptionStatus === "active";
-  const inTrial = trialEnd > now && user.subscriptionStatus === "trial";
-
-  if (hasActiveSub || inTrial) {
+  if (userHasAccess(currentUser)) {
     next();
     return;
   }
 
   res.status(402).json({
     error: "Subscription required",
-    message: "Your free trial has ended. Subscribe for $10/week to continue.",
+    message: `Your free trial has ended. Subscribe for $${MONTHLY_PRICE_USD}/month to continue.`,
+    subscriptionStatus: currentUser.subscriptionStatus,
   });
 }

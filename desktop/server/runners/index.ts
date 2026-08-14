@@ -49,6 +49,14 @@ function executionSteps(output: string, error?: string): VisualizationStep[] {
   }));
 }
 
+function runPythonCommand(tracerFile: string) {
+  let result = runCommand("python3", [tracerFile]);
+  if (!result.stdout.trim()) {
+    result = runCommand("python", [tracerFile]);
+  }
+  return result;
+}
+
 export function visualizePython(code: string): VisualizationResult {
   const tmp = makeTempDir();
   const userFile = path.join(tmp, "user_code.py");
@@ -124,7 +132,7 @@ except Exception as e:
   fs.writeFileSync(tracerFile, tracer);
 
   try {
-    const result = runCommand("python3", [tracerFile]);
+    const result = runPythonCommand(tracerFile);
     const stdout = result.stdout.trim();
     if (!stdout) {
       return {
@@ -132,7 +140,7 @@ except Exception as e:
         success: false,
         steps: [],
         finalOutput: "",
-        error: result.stderr.trim() || "Python tracer produced no output. Is python3 installed?",
+        error: result.stderr.trim() || "Python tracer produced no output. Is Python installed?",
         visualizationLevel: "execution",
       };
     }

@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.node.json && vite build && tsc -p tsconfig.electron.json",
+    "build:web": "tsc -p tsconfig.node.json && vite build && tsc -p tsconfig.electron.json",
+    "start:web": "node dist-electron/server/standalone.js",
     "preview": "vite preview",
     "postinstall": "node scripts/ensure-electron.js",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron .\"",
@@ -56,6 +58,18 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
+      "server/java-tracer/**/*",
+      "server/native-tracer/**/*",
+      "server/csharp-tracer/**/*",
+      "server/go-tracer/**/*"
+    ],
+    "extraResources": [
+      { "from": "server/java-tracer", "to": "tracers/java-tracer" },
+      { "from": "server/native-tracer", "to": "tracers/native-tracer" },
+      { "from": "server/csharp-tracer", "to": "tracers/csharp-tracer" },
+      { "from": "server/go-tracer", "to": "tracers/go-tracer" }
+    ],
+    "asarUnpack": [
       "server/java-tracer/**/*",
       "server/native-tracer/**/*",
       "server/csharp-tracer/**/*",

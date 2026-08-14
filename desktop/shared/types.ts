@@ -89,4 +89,4 @@ export const MONACO_LANGUAGE_MAP: Record<Language, string> = {
 };
 
 export const TRIAL_DAYS = 7;
-export const WEEKLY_PRICE_USD = 10;
+export const MONTHLY_PRICE_USD = 2;

@@ -38,8 +38,8 @@ Cross-platform desktop SaaS for visual DSA learning.
 ### Features
 
 - Login / registration with **7-day free trial**
-- **$10/week** Stripe subscription after trial
-- Admin panel to upload questions with starter code for all languages
+- **$2/month** Stripe subscription after trial (access revoked when trial ends)
+- Personal question library with starter and solution code per language
 - Monaco code editor
 - **Full step-by-step visualization** for Python, JavaScript, Java, C, C++, C#, and Go
 - Array bar charts, graph snapshots, variable diff highlighting, playback controls
@@ -66,6 +66,66 @@ npm run electron:dev
 ```
 
 Demo admin: `admin@codeviz.app` / `admin123`
+
+### Stripe setup ($2/month) — optional
+
+Payments are **disabled by default** so the app is free during early access (no Stripe required in India).
+
+To enable billing later (Stripe or after adding another provider):
+
+1. Set `BILLING_ENABLED=true` in `desktop/.env`
+2. Create a **$2/month** price in Stripe and set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`
+3. Forward webhooks locally:
+   ```bash
+   stripe listen --forward-to localhost:3847/api/billing/webhook
+   ```
+
+### Build & distribute (macOS)
+
+```bash
+cd desktop
+npm install
+npm run electron:build
+```
+
+Installers are written to `desktop/release/`. GitHub Actions also builds on `v*` tags (see `.github/workflows/release.yml`).
+
+User data (accounts, questions) is stored in the OS user data folder when running the packaged app.
+
+### Web beta deploy (Render)
+
+CodeViz can run as a **single web app** (React UI + API + compilers in one container).
+
+**Local web mode:**
+
+```bash
+cd desktop
+npm install
+npm run build:web
+PORT=8080 npm run start:web
+# open http://localhost:8080
+```
+
+**Deploy to [Render](https://render.com)** (recommended for beta):
+
+1. Push this repo to GitHub
+2. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**
+3. Connect `stealth-startup` — Render reads `render.yaml` at repo root
+4. Deploy — you get a URL like `https://codeviz-beta.onrender.com`
+5. Add a **persistent disk** is configured in `render.yaml` at `/data` for SQLite
+
+**Docker (any host):**
+
+```bash
+cd desktop
+docker build -t codeviz-web .
+docker run -p 8080:8080 -v codeviz-data:/data codeviz-web
+```
+
+**Beta notes:**
+- Billing is off (`BILLING_ENABLED=false`) — free for all users
+- Visualization needs compilers in the container (Python, Java, C/C++, Go, C# included in Docker image)
+- First deploy may take ~10–15 minutes (large image with JDK + .NET)
 
 ### Language runtimes
 

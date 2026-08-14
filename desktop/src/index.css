@@ -14,3 +14,67 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.monaco-editor .execution-line-highlight {
+  background-color: rgba(109, 40, 217, 0.22) !important;
+  border-left: 3px solid #7c3aed;
+}
+
+.monaco-editor .execution-line-glyph {
+  background-color: #7c3aed;
+  border-radius: 999px;
+  margin-left: 4px;
+  width: 8px !important;
+}
+
+.viz-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.viz-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.viz-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.viz-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 999px;
+}
+
+.viz-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.viz-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: #1e293b;
+  outline: none;
+}
+
+.viz-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #7c3aed;
+  border: 2px solid #c4b5fd;
+  cursor: pointer;
+}
+
+.viz-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #7c3aed;
+  border: 2px solid #c4b5fd;
+  cursor: pointer;
+}

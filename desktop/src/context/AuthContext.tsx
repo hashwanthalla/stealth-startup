@@ -13,6 +13,8 @@ interface AuthContextValue {
   user: User | null;
   token: string | null;
   loading: boolean;
+  hasAccess: boolean;
+  billingEnabled: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -25,14 +27,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem("codeviz_token"));
   const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(true);
+  const [billingEnabled, setBillingEnabled] = useState(false);
 
   const refreshUser = async () => {
     if (!token) {
       setUser(null);
+      setHasAccess(false);
+      setBillingEnabled(false);
       return;
     }
     const status = await api.billingStatus();
     setUser(status.user);
+    setHasAccess(status.hasAccess);
+    setBillingEnabled(status.billingEnabled);
   };
 
   useEffect(() => {
@@ -55,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       loading,
+      hasAccess,
+      billingEnabled,
       login: async (email, password) => {
         const result = await api.login(email, password);
         localStorage.setItem("codeviz_token", result.token);
@@ -71,10 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("codeviz_token");
         setToken(null);
         setUser(null);
+        setHasAccess(false);
+        setBillingEnabled(false);
       },
       refreshUser,
     }),
-    [user, token, loading]
+    [user, token, loading, hasAccess, billingEnabled]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -10,7 +10,7 @@ const links = [
 ];
 
 export function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user, logout, billingEnabled } = useAuth();
 
   return (
     <aside className="flex w-72 flex-col border-r border-slate-800 bg-slate-900/60 p-6">
@@ -48,10 +48,13 @@ export function Sidebar() {
           <p className="mt-1 text-xs capitalize text-slate-400">
             {user?.role} · {user?.subscriptionStatus}
           </p>
-          {user?.subscriptionStatus === "trial" && (
+          {billingEnabled && user?.subscriptionStatus === "trial" && (
             <p className="mt-2 text-xs text-amber-300">
               Trial ends in {daysRemaining(user.trialEndsAt)} days
             </p>
+          )}
+          {!billingEnabled && (
+            <p className="mt-2 text-xs text-emerald-300">Free early access</p>
           )}
         </div>
         <button

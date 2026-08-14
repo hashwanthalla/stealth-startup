@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import type { VisualizationResult, VisualizationStep } from "../../shared/types";
 import { instrumentGo } from "../go-tracer/instrument";
+import { resolveTracerFile } from "../services/tracer-paths";
 
 const JSON_MARKER = "__CODEVIZ_JSON__";
 
@@ -16,12 +17,7 @@ function run(cmd: string, args: string[], cwd?: string) {
 }
 
 function resolve(file: string) {
-  const candidates = [
-    path.join(__dirname, "..", "go-tracer", file),
-    path.join(process.cwd(), "server", "go-tracer", file),
-  ];
-  for (const candidate of candidates) if (fs.existsSync(candidate)) return candidate;
-  throw new Error(`${file} not found`);
+  return resolveTracerFile("go-tracer", file);
 }
 
 function parse(stdout: string): VisualizationResult {
